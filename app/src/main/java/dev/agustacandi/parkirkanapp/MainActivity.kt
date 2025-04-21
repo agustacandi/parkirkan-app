@@ -21,12 +21,15 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -272,6 +275,7 @@ fun ParkingAppNavHost(
 }
 
 // 3. Implementation MainScreen dengan Bottom Navigation
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(navController: NavHostController) {
     val bottomNavItems = listOf(
@@ -284,6 +288,17 @@ fun MainScreen(navController: NavHostController) {
     var selectedItem by remember { mutableIntStateOf(0) }
 
     Scaffold(
+        topBar = {
+            if (selectedItem != 0) {
+                TopAppBar(
+                    title = { Text(bottomNavItems[selectedItem].route.replaceFirstChar { it.uppercase() }) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                )
+            }
+        },
         bottomBar = {
             NavigationBar {
                 bottomNavItems.forEachIndexed { index, item ->

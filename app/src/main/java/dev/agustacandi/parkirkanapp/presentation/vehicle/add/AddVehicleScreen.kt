@@ -1,13 +1,8 @@
 package dev.agustacandi.parkirkanapp.presentation.vehicle.add
 
-import android.content.ContentValues
-import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
-import java.io.ByteArrayOutputStream
+import dev.agustacandi.parkirkanapp.util.RequestCameraPermission
+import dev.agustacandi.parkirkanapp.util.ext.compressAndCreateImageFile
 import java.io.File
-import java.io.FileOutputStream
 
 @Composable
 fun AddVehicleScreen(
@@ -54,16 +49,21 @@ fun AddVehicleScreen(
     var licensePlate by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
-
+    var cameraPermissionGranted by remember { mutableStateOf(false) }
 
     // File untuk menyimpan foto kamera
     val photoFile = remember { File(context.cacheDir, "temp_photo_${System.currentTimeMillis()}.jpg") }
     val photoUri = remember {
         FileProvider.getUriForFile(
             context,
-            "${context.packageName}.fileprovider",  // Perlu dikonfigurasi di AndroidManifest
+            "${context.packageName}.fileprovider",
             photoFile
         )
+    }
+
+    // Minta izin kamera
+    RequestCameraPermission { isGranted ->
+        cameraPermissionGranted = isGranted
     }
 
     // Efek untuk menangani state
@@ -83,23 +83,13 @@ fun AddVehicleScreen(
         uri?.let { selectedImageUri = it }
     }
 
-    // Kamera launcher - menggunakan TakePicturePreview untuk lebih sederhana
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            try {
-                // Simpan bitmap ke file
-                val outputStream = FileOutputStream(photoFile)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                outputStream.flush()
-                outputStream.close()
-
-                // Gunakan file yang dibuat
-                selectedImageUri = Uri.fromFile(photoFile)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            selectedImageUri = photoUri
+        } else {
+            Toast.makeText(context, "Gagal mengambil foto", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -112,11 +102,19 @@ fun AddVehicleScreen(
             },
             onCameraSelected = {
                 showImageSourceDialog = false
-                cameraLauncher.launch(null) // Tidak memerlukan input, akan mengembalikan bitmap
+                if (cameraPermissionGranted) {
+                    // Set URI ke null terlebih dahulu untuk memicu recomposition
+                    selectedImageUri = null
+                    cameraLauncher.launch(photoUri)
+                } else {
+                    // Tampilkan toast atau dialog bahwa izin kamera diperlukan
+                    Toast.makeText(context, "Izin kamera diperlukan untuk menggunakan fitur ini", Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }
 
+    // Content lainnya sama seperti sebelumnya
     AddVehicleContent(
         name = name,
         onNameChange = { name = it },
@@ -130,53 +128,16 @@ fun AddVehicleScreen(
         onSaveClick = {
             selectedImageUri?.let { uri ->
                 // Konversi Uri ke File dengan kompresi
-                val file = compressAndCreateImageFile(context, uri)
+                val file = uri.compressAndCreateImageFile(context)
                 file?.let {
                     viewModel.addVehicle(name, licensePlate, it)
                 } ?: run {
                     // Tampilkan pesan error jika kompresi gagal
-                    // Bisa ditambahkan dialog atau snackbar di sini
+                    Toast.makeText(context, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     )
-}
-
-// Fungsi tidak lagi digunakan karena kita menggunakan TakePicturePreview
-
-private fun compressAndCreateImageFile(context: Context, uri: Uri): File? {
-    try {
-        // Baca gambar dari URI
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
-
-        // Kompres gambar
-        val compressedBitmap = if (bitmap.width > 1024 || bitmap.height > 1024) {
-            // Hitung faktor untuk mengurangi ukuran gambar dengan mempertahankan aspek rasio
-            val ratio = (1024.0 / bitmap.width).coerceAtMost(1024.0 / bitmap.height)
-            val width = (bitmap.width * ratio).toInt()
-            val height = (bitmap.height * ratio).toInt()
-            Bitmap.createScaledBitmap(bitmap, width, height, true)
-        } else {
-            bitmap
-        }
-
-        // Konversi bitmap ke file
-        val file = File(context.cacheDir, "vehicle_image_${System.currentTimeMillis()}.jpg")
-        val outputStream = FileOutputStream(file)
-        val byteArrayOutputStream = ByteArrayOutputStream()
-
-        // Kompresi gambar ke JPEG dengan kualitas 80%
-        compressedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream)
-        outputStream.write(byteArrayOutputStream.toByteArray())
-        outputStream.close()
-
-        return file
-    } catch (e: Exception) {
-        e.printStackTrace()
-        return null
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

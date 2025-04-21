@@ -58,25 +58,25 @@ fun VehicleScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Vehicles") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = {
-                        viewModel.refreshData()
-                        vehicleItems.refresh()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            )
+//            TopAppBar(
+//                title = { Text("Vehicles") },
+//                colors = TopAppBarDefaults.topAppBarColors(
+//                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+//                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+//                ),
+//                actions = {
+//                    IconButton(onClick = {
+//                        viewModel.refreshData()
+//                        vehicleItems.refresh()
+//                    }) {
+//                        Icon(
+//                            imageVector = Icons.Default.Refresh,
+//                            contentDescription = "Refresh",
+//                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+//                        )
+//                    }
+//                }
+//            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddVehicleClick) {
