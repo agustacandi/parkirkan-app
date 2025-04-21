@@ -56,6 +56,7 @@ import dev.agustacandi.parkirkanapp.presentation.auth.LoginState
 import dev.agustacandi.parkirkanapp.presentation.home.HomeScreen
 import dev.agustacandi.parkirkanapp.presentation.parking.ParkingScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.VehicleScreen
+import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
 import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
@@ -225,11 +226,16 @@ fun ParkingAppNavHost(
 
         // Add Vehicle Screen
         composable(NavDestination.AddVehicle.route) {
-//            AddVehicleScreen(
-//                onNavigateBack = { navController.navigateUp() },
-//                onVehicleAdded = { navController.navigateUp() }
-//            )
-        }
+            AddVehicleScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onVehicleAdded = {
+                    // Kembali ke halaman Vehicle dengan refresh data
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_vehicles", true)
+                    navController.navigateUp()
+                }
+            )        }
 
         // Edit Vehicle Screen dengan parameter
         composable(
@@ -334,7 +340,8 @@ fun MainScreen(navController: NavHostController) {
                         },
                         onEditVehicleClick = { vehicleId ->
                             navController.navigate(NavDestination.EditVehicle.createRoute(vehicleId))
-                        }
+                        },
+                        navController = navController
                     )
                 }
 

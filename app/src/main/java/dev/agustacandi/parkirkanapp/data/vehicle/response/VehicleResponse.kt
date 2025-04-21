@@ -50,3 +50,10 @@ data class PageLink(
     val label: String,
     val active: Boolean
 )
+
+// Add Response
+data class AddVehicleResponse(
+    val success: Boolean,
+    val data: VehicleRecord,
+    val message: String
+)

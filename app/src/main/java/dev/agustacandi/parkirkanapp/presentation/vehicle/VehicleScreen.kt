@@ -12,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import dev.agustacandi.parkirkanapp.data.vehicle.response.VehicleRecord
@@ -21,7 +24,9 @@ import dev.agustacandi.parkirkanapp.data.vehicle.response.VehicleRecord
 fun VehicleScreen(
     viewModel: VehicleViewModel = hiltViewModel(),
     onAddVehicleClick: () -> Unit,
-    onEditVehicleClick: (String) -> Unit) {
+    onEditVehicleClick: (String) -> Unit,
+    navController: NavHostController) {
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
     val vehicleItems = viewModel.getParkingRecords().collectAsLazyPagingItems()
 
     // Collect state dari ViewModel menggunakan collectAsState
@@ -38,6 +43,16 @@ fun VehicleScreen(
             }
 
             is LoadState.NotLoading -> viewModel.setLoading(false)
+        }
+    }
+
+    LaunchedEffect(savedStateHandle) {
+        savedStateHandle?.getLiveData<Boolean>("refresh_vehicles")?.observe(navController.currentBackStackEntry!!) { shouldRefresh ->
+            if (shouldRefresh) {
+                viewModel.refreshData()
+                vehicleItems.refresh()
+                savedStateHandle["refresh_vehicles"] = false
+            }
         }
     }
 
