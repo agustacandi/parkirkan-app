@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "322078995177",
+    "project_id": "parkirkan-813d5",
+    "storage_bucket": "parkirkan-813d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:322078995177:android:1527c03fb8fd954b3e7678",
+        "android_client_info": {
+          "package_name": "dev.agustacandi.parkirkanapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJn6T4wVNgEnFQv-EdLkghFIR_-HXUuxk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
