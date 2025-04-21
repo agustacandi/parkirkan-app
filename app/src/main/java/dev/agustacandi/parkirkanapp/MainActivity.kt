@@ -7,20 +7,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,10 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -52,12 +44,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
-import dev.agustacandi.parkirkanapp.presentation.SplashScreen
+import dev.agustacandi.parkirkanapp.presentation.splash.SplashScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthViewModel
 import dev.agustacandi.parkirkanapp.presentation.auth.LoginState
 import dev.agustacandi.parkirkanapp.presentation.home.HomeScreen
 import dev.agustacandi.parkirkanapp.presentation.parking.ParkingScreen
+import dev.agustacandi.parkirkanapp.presentation.profile.ProfileScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.VehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
@@ -367,6 +360,12 @@ fun MainScreen(navController: NavHostController) {
                         },
                         onAboutClick = {
                             navController.navigate(NavDestination.About.route)
+                        },
+                        onLogoutClick = {
+//                            authViewModel.logout()
+//                            navController.navigate(NavDestination.Login.route) {
+//                                popUpTo(NavDestination.Main.route) { inclusive = true }
+//                            }
                         }
                     )
                 }
@@ -384,36 +383,3 @@ private fun MainScreenPreview() {
     }
 }
 
-@Composable
-fun ProfileScreen(
-    onChangePasswordClick: () -> Unit,
-    onAboutClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Profile Screen", style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onChangePasswordClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Change Password")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onAboutClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("About")
-        }
-    }
-
-}

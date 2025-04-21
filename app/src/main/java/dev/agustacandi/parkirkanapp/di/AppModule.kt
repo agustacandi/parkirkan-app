@@ -22,7 +22,6 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.Path
 import javax.inject.Singleton
 
 @Module
@@ -47,7 +46,7 @@ class AppModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://encourages-blue-pole-merchants.trycloudflare.com/api/")
+            .baseUrl("https://dial-gibson-metro-metric.trycloudflare.com/api/")
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .client(okHttpClient)
             .build()

@@ -5,16 +5,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import dev.agustacandi.parkirkanapp.data.vehicle.response.VehicleRecord
@@ -25,7 +23,8 @@ fun VehicleScreen(
     viewModel: VehicleViewModel = hiltViewModel(),
     onAddVehicleClick: () -> Unit,
     onEditVehicleClick: (String) -> Unit,
-    navController: NavHostController) {
+    navController: NavHostController
+) {
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
     val vehicleItems = viewModel.getParkingRecords().collectAsLazyPagingItems()
 
@@ -41,7 +40,6 @@ fun VehicleScreen(
                 viewModel.setLoading(false)
                 viewModel.handleError(refresh.error.localizedMessage ?: "Unknown error")
             }
-
             is LoadState.NotLoading -> viewModel.setLoading(false)
         }
     }
@@ -57,27 +55,6 @@ fun VehicleScreen(
     }
 
     Scaffold(
-        topBar = {
-//            TopAppBar(
-//                title = { Text("Vehicles") },
-//                colors = TopAppBarDefaults.topAppBarColors(
-//                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-//                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-//                ),
-//                actions = {
-//                    IconButton(onClick = {
-//                        viewModel.refreshData()
-//                        vehicleItems.refresh()
-//                    }) {
-//                        Icon(
-//                            imageVector = Icons.Default.Refresh,
-//                            contentDescription = "Refresh",
-//                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-//                        )
-//                    }
-//                }
-//            )
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddVehicleClick) {
                 Icon(Icons.Default.Add, contentDescription = "Add Vehicle")
@@ -89,58 +66,53 @@ fun VehicleScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Main content
-            LazyColumn(
+            // Menggunakan PullToRefreshBox untuk implementasi pull-to-refresh
+            PullToRefreshBox(
+                onRefresh = {
+                    viewModel.refreshData()
+                    vehicleItems.refresh()
+                },
+                isRefreshing = isLoading || vehicleItems.loadState.refresh is LoadState.Loading,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(vehicleItems.itemCount) { index ->
-                    val vehicleRecord = vehicleItems[index]
-                    vehicleRecord?.let {
-                        VehicleRecordItem(it, onEditVehicleClick)
+                // Main content
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(vehicleItems.itemCount) { index ->
+                        val vehicleRecord = vehicleItems[index]
+                        vehicleRecord?.let {
+                            VehicleRecordItem(it, onEditVehicleClick)
+                        }
                     }
-                }
 
-                // Loading and error states
-                item {
-                    when {
-                        vehicleItems.loadState.refresh is LoadState.Loading -> {
-                            LoadingItem(modifier = Modifier.fillParentMaxSize())
-                        }
-
-                        vehicleItems.loadState.append is LoadState.Loading -> {
-                            LoadingItem()
-                        }
-
-                        vehicleItems.loadState.refresh is LoadState.Error -> {
-                            val error = vehicleItems.loadState.refresh as LoadState.Error
-                            ErrorItem(
-                                message = error.error.localizedMessage ?: "An error occurred",
-                                onRetryClick = { vehicleItems.retry() },
-                                modifier = Modifier.fillParentMaxSize()
-                            )
-                        }
-
-                        vehicleItems.loadState.append is LoadState.Error -> {
-                            val error = vehicleItems.loadState.append as LoadState.Error
-                            ErrorItem(
-                                message = error.error.localizedMessage ?: "An error occurred",
-                                onRetryClick = { vehicleItems.retry() }
-                            )
+                    // Loading and error states
+                    item {
+                        when {
+                            vehicleItems.loadState.append is LoadState.Loading -> {
+                                LoadingItem()
+                            }
+                            vehicleItems.loadState.refresh is LoadState.Error -> {
+                                val error = vehicleItems.loadState.refresh as LoadState.Error
+                                ErrorItem(
+                                    message = error.error.localizedMessage ?: "An error occurred",
+                                    onRetryClick = { vehicleItems.retry() },
+                                    modifier = Modifier.fillParentMaxSize()
+                                )
+                            }
+                            vehicleItems.loadState.append is LoadState.Error -> {
+                                val error = vehicleItems.loadState.append as LoadState.Error
+                                ErrorItem(
+                                    message = error.error.localizedMessage ?: "An error occurred",
+                                    onRetryClick = { vehicleItems.retry() }
+                                )
+                            }
                         }
                     }
                 }
             }
-
-            // Tampilkan indikator loading jika sedang refresh
-//            if (isLoading) {
-//                CircularProgressIndicator(
-//                    modifier = Modifier
-//                        .align(Alignment.TopCenter)
-//                        .padding(top = 8.dp)
-//                )
-//            }
 
             // Tampilkan error message jika ada
             errorMessage?.let {
@@ -162,7 +134,6 @@ fun VehicleScreen(
         }
     }
 }
-
 
 @Composable
 fun VehicleRecordItem(vehicleRecord: VehicleRecord, onEditVehicleClick: (String) -> Unit) {
@@ -235,4 +206,3 @@ fun ErrorItem(
         }
     }
 }
-

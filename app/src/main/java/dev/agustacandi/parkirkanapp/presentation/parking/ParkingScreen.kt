@@ -4,9 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,38 +40,19 @@ fun ParkingScreen(
                 viewModel.setLoading(false)
                 viewModel.handleError(refresh.error.localizedMessage ?: "Unknown error")
             }
-
             is LoadState.NotLoading -> viewModel.setLoading(false)
         }
     }
 
-    Scaffold(
-//        topBar = {
-//            TopAppBar(
-//                title = { Text("Parking Records") },
-//                colors = TopAppBarDefaults.topAppBarColors(
-//                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-//                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-//                ),
-//                actions = {
-//                    IconButton(onClick = {
-//                        viewModel.refreshData()
-//                        parkingItems.refresh()
-//                    }) {
-//                        Icon(
-//                            imageVector = Icons.Default.Refresh,
-//                            contentDescription = "Refresh",
-//                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-//                        )
-//                    }
-//                }
-//            )
-//        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
+    Scaffold { paddingValues ->
+        // Menggunakan PullToRefreshBox untuk implementasi pull-to-refresh
+        PullToRefreshBox(
+            onRefresh = {
+                viewModel.refreshData()
+                parkingItems.refresh()
+            },
+            isRefreshing = isLoading || parkingItems.loadState.refresh is LoadState.Loading,
+            modifier = Modifier.padding(paddingValues).fillMaxSize(),
         ) {
             // Main content
             LazyColumn(
@@ -90,14 +70,9 @@ fun ParkingScreen(
                 // Loading and error states
                 item {
                     when {
-                        parkingItems.loadState.refresh is LoadState.Loading -> {
-                            LoadingItem(modifier = Modifier.fillParentMaxSize())
-                        }
-
                         parkingItems.loadState.append is LoadState.Loading -> {
                             LoadingItem()
                         }
-
                         parkingItems.loadState.refresh is LoadState.Error -> {
                             val error = parkingItems.loadState.refresh as LoadState.Error
                             ErrorItem(
@@ -106,7 +81,6 @@ fun ParkingScreen(
                                 modifier = Modifier.fillParentMaxSize()
                             )
                         }
-
                         parkingItems.loadState.append is LoadState.Error -> {
                             val error = parkingItems.loadState.append as LoadState.Error
                             ErrorItem(
@@ -117,17 +91,6 @@ fun ParkingScreen(
                     }
                 }
             }
-
-            // Tampilkan indikator loading jika sedang refresh
-//            if (isLoading) {
-//                CircularProgressIndicator(
-//                    modifier = Modifier
-//                        .align(Alignment.TopCenter)
-//                        .padding(top = 8.dp)
-//                )
-//            }
-
-            // Tampilkan error message jika ada
             errorMessage?.let {
                 if (it.isNotEmpty()) {
                     Snackbar(
@@ -145,9 +108,10 @@ fun ParkingScreen(
                 }
             }
         }
+
+        // Tampilkan error message jika ada
     }
 }
-
 
 @Composable
 fun ParkingRecordItem(parkingRecord: ParkingRecord) {
@@ -361,5 +325,3 @@ fun ErrorItem(
         }
     }
 }
-
-// Helper function to format date time

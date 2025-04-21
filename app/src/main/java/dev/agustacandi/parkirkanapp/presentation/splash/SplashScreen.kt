@@ -1,4 +1,4 @@
-package dev.agustacandi.parkirkanapp.presentation
+package dev.agustacandi.parkirkanapp.presentation.splash
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
