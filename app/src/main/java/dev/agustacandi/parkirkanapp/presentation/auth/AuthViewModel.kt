@@ -69,6 +69,8 @@ class AuthViewModel @Inject constructor(
                 Log.d("AuthViewModel", "isLoggedIn: $isLoggedIn")
                 if (isLoggedIn) {
                     _loginState.value = LoginState.AlreadyLoggedIn
+                } else {
+                    _loginState.value = LoginState.Login
                 }
             } catch (e: Exception) {
                 // Ignore error
@@ -79,6 +81,7 @@ class AuthViewModel @Inject constructor(
 
 sealed class LoginState {
     data object Idle : LoginState()
+    data object Login: LoginState()
     data object Loading : LoginState()
     data object Success : LoginState()
     data object AlreadyLoggedIn : LoginState()

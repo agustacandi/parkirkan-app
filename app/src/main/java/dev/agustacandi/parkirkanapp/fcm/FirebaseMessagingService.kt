@@ -5,7 +5,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -15,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.agustacandi.parkirkanapp.MainActivity
 import dev.agustacandi.parkirkanapp.R
 import dev.agustacandi.parkirkanapp.domain.auth.repository.AuthRepository
+import dev.agustacandi.parkirkanapp.fcm.FirebaseMessagingServiceAAA.Companion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +31,7 @@ import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class FirebaseMessagingService : FirebaseMessagingService() {
+class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var authRepository: AuthRepository
@@ -33,7 +40,7 @@ class FirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "FCMService"
-        private const val CHANNEL_ID = "fcm_notification_channel"
+        private const val CHANNEL_ID = "fcm_notification_channel_v2"
         private const val CHANNEL_NAME = "FCM Notifications"
         private const val CHANNEL_DESCRIPTION = "Receive notifications from server"
     }
@@ -54,10 +61,6 @@ class FirebaseMessagingService : FirebaseMessagingService() {
             val deepLinkData = remoteMessage.data.filter {
                 it.key != "title" && it.key != "message"
             }
-
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            val ringtone = RingtoneManager.getRingtone(applicationContext, alarmSound)
-            ringtone.play()
 
             // Tampilkan notifikasi
             showNotification(title, message, deepLinkData)
@@ -116,18 +119,25 @@ class FirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Buat notification builder
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+        // Buat pola vibrasi panjang
+        val vibrationPattern = longArrayOf(
+            0, 1000, 200, 1000, 200, 1000, 200, 1000, 200, 1000
+        )
+
         val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notifications)
             .setContentTitle(title)
             .setContentText(message)
             .setAutoCancel(true)
-            .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setVibrate(longArrayOf(1000, 1000, 1000, 1000))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVibrate(vibrationPattern)
+
+
+        triggerSystemVibration(vibrationPattern)
 
         // Tampilkan notifikasi
         with(NotificationManagerCompat.from(this)) {
@@ -142,13 +152,53 @@ class FirebaseMessagingService : FirebaseMessagingService() {
 
     private fun createNotificationChannel() {
         val importance = NotificationManager.IMPORTANCE_HIGH
+
+        // Custom sound URI
+        val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.alarm_sound}")
+
+        // Audio attributes untuk sound alarm
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_ALARM) // ALARM untuk suara keras
+            .build()
+
+        // Pola vibrasi panjang
+        val longVibrationPattern = longArrayOf(
+            0, 1000, 200, 1000, 200, 1000, 200, 1000, 200, 1000
+        )
         val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
             description = CHANNEL_DESCRIPTION
+            setSound(soundUri, audioAttributes)
+            vibrationPattern = longVibrationPattern
             enableVibration(true)
+            setBypassDnd(true)
+            enableLights(true)
+            lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            setShowBadge(true)
         }
 
         // Register channel with system
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
+    }
+
+    private fun triggerSystemVibration(pattern: LongArray) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                val vibrator = vibratorManager.defaultVibrator
+
+                // Gunakan VibrationEffect dengan amplitudo yang berubah-ubah
+                val amplitudes = IntArray(pattern.size) { i ->
+                    if (i % 2 == 1) VibrationEffect.DEFAULT_AMPLITUDE else 0
+                }
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitudes, -1))
+            } else {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error triggering vibration", e)
+        }
     }
 }
