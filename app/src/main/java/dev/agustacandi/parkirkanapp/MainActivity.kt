@@ -34,9 +34,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -49,6 +51,7 @@ import dev.agustacandi.parkirkanapp.presentation.splash.SplashScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthViewModel
 import dev.agustacandi.parkirkanapp.presentation.auth.LoginState
+import dev.agustacandi.parkirkanapp.presentation.auth.LogoutState
 import dev.agustacandi.parkirkanapp.presentation.home.HomeScreen
 import dev.agustacandi.parkirkanapp.presentation.parking.ParkingScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.ProfileScreen
@@ -377,6 +380,19 @@ fun MainScreen(navController: NavHostController) {
                 }
 
                 NavDestination.BottomNav.Profile -> {
+
+                    val authViewModel: AuthViewModel = hiltViewModel()
+                    val logoutState by authViewModel.logoutState.collectAsState()
+
+                    // Effect to navigate when logout is successful
+                    LaunchedEffect(logoutState) {
+                        if (logoutState is LogoutState.Success) {
+                            navController.navigate(NavDestination.Login.route) {
+                                popUpTo(NavDestination.Main.route) { inclusive = true }
+                            }
+                        }
+                    }
+
                     ProfileScreen(
                         onChangePasswordClick = {
                             navController.navigate(NavDestination.ChangePassword.route)
@@ -385,10 +401,7 @@ fun MainScreen(navController: NavHostController) {
                             navController.navigate(NavDestination.About.route)
                         },
                         onLogoutClick = {
-//                            authViewModel.logout()
-//                            navController.navigate(NavDestination.Login.route) {
-//                                popUpTo(NavDestination.Main.route) { inclusive = true }
-//                            }
+                            authViewModel.logout()
                         }
                     )
                 }

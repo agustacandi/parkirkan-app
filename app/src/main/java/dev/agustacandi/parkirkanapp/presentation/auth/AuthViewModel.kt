@@ -26,6 +26,10 @@ class AuthViewModel @Inject constructor(
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
     val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
 
+    private val _logoutState = MutableStateFlow<LogoutState>(LogoutState.Idle)
+    val logoutState: StateFlow<LogoutState> = _logoutState.asStateFlow()
+
+
     @OptIn(ExperimentalCoroutinesApi::class)
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -61,6 +65,27 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun logout() {
+        viewModelScope.launch {
+            _logoutState.value = LogoutState.Loading
+
+            authRepository.logout()
+                .onEach { result ->
+                    if (result.isSuccess) {
+                        _logoutState.value = LogoutState.Success
+                    } else {
+                        _logoutState.value = LogoutState.Error(
+                            result.exceptionOrNull()?.message ?: "Logout failed"
+                        )
+                    }
+                }
+                .catch { e ->
+                    _logoutState.value = LogoutState.Error(e.message ?: "Unknown error")
+                }
+                .launchIn(viewModelScope)
+        }
+    }
+
     // Cek apakah user sudah login sebelumnya
     fun checkLoginStatus() {
         viewModelScope.launch {
@@ -86,4 +111,11 @@ sealed class LoginState {
     data object Success : LoginState()
     data object AlreadyLoggedIn : LoginState()
     data class Error(val message: String) : LoginState()
+}
+
+sealed class LogoutState {
+    data object Idle : LogoutState()
+    data object Loading : LogoutState()
+    data object Success : LogoutState()
+    data class Error(val message: String) : LogoutState()
 }

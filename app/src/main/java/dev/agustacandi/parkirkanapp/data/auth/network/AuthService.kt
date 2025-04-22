@@ -14,6 +14,9 @@ interface AuthService {
         @Body request: LoginRequest,
     ): Response<AuthResponse>
 
+    @POST("logout")
+    suspend fun logout(): Response<Void>
+
     @PATCH("user/{userId}/fcm-token")
     suspend fun updateFcmToken(
         @Path("userId") userId: String,

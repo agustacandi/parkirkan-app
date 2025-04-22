@@ -54,6 +54,21 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }.flowOn(Dispatchers.IO)
 
+    override fun logout(): Flow<Result<Unit>> = flow {
+        try {
+            val response = authService.logout()
+            if (response.isSuccessful) {
+                // Clear user data from preferences
+                userPreferences.clearUserData()
+                emit(Result.success(Unit))
+            } else {
+                emit(Result.failure(Exception("Logout failed: ${response.message()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
     /**
      * Update FCM token pada server
      * Mengembalikan Flow<Result<Unit>>
