@@ -14,7 +14,7 @@ data class ParkingData(
 	val data: List<ParkingRecord>,
 	@Json(name = "first_page_url")
 	val firstPageUrl: String,
-	val from: Int,
+	val from: Int? = null,
 	@Json(name = "last_page")
 	val lastPage: Int,
 	@Json(name = "last_page_url")
@@ -27,7 +27,7 @@ data class ParkingData(
 	val perPage: Int,
 	@Json(name = "prev_page_url")
 	val prevPageUrl: String?,
-	val to: Int,
+	val to: Int? = null,
 	val total: Int
 )
 
@@ -42,7 +42,7 @@ data class ParkingRecord(
 	@Json(name = "check_out_image")
 	val checkOutImage: String? = null,
 	@Json(name = "is_check_out_confirmed")
-	val isCheckOutConfirmed: Boolean,
+	val isCheckOutConfirmed: Int,
 	val status: String,
 	@Json(name = "vehicle_id")
 	val vehicleId: Int,

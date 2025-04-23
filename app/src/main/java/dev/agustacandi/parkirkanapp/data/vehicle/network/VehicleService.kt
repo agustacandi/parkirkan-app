@@ -1,6 +1,7 @@
 package dev.agustacandi.parkirkanapp.data.vehicle.network
 
 import dev.agustacandi.parkirkanapp.data.vehicle.response.AddVehicleResponse
+import dev.agustacandi.parkirkanapp.data.vehicle.response.AllVehiclesResponse
 import dev.agustacandi.parkirkanapp.data.vehicle.response.DeleteVehicleResponse
 import dev.agustacandi.parkirkanapp.data.vehicle.response.SingleVehicleResponse
 import dev.agustacandi.parkirkanapp.data.vehicle.response.VehicleResponse
@@ -61,6 +62,9 @@ interface VehicleService {
     suspend fun deleteVehicle(
         @Path("id") id: Int
     ): DeleteVehicleResponse
+
+    @GET("vehicle-all")
+    suspend fun getAllVehicles(): AllVehiclesResponse
 }
 
 data class VehicleRequest(

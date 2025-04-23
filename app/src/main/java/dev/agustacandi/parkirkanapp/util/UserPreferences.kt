@@ -40,6 +40,7 @@ class UserPreferences @Inject constructor(
         private const val PREF_NAME = "user_preferences"
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER = "user"
+        private const val KEY_SELECTED_VEHICLE_ID = "selected_vehicle_id"
     }
 
     fun saveAuthToken(token: String) {
@@ -79,4 +80,23 @@ class UserPreferences @Inject constructor(
         _userFlow.value = null
         _isLoggedInFlow.value = false
     }
+
+    fun saveSelectedVehicleId(vehicleId: Int?) {
+        prefs.edit {
+            if (vehicleId != null) {
+                putInt(KEY_SELECTED_VEHICLE_ID, vehicleId)
+            } else {
+                remove(KEY_SELECTED_VEHICLE_ID)
+            }
+        }
+    }
+
+    fun getSelectedVehicleId(): Int? {
+        return if (prefs.contains(KEY_SELECTED_VEHICLE_ID)) {
+            prefs.getInt(KEY_SELECTED_VEHICLE_ID, -1)
+        } else {
+            null
+        }
+    }
+
 }

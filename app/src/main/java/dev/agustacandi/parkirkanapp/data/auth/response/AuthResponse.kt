@@ -23,7 +23,7 @@ data class Data(
 	val updatedAt: String,
 
 	@Json(name="phone")
-	val phone: String,
+	val phone: String? = null,
 
 	@Json(name="name")
 	val name: String,

@@ -12,6 +12,8 @@ interface VehicleRepository {
         scope: CoroutineScope
     ): Flow<PagingData<VehicleRecord>>
 
+    suspend fun getVehiclesList(): List<VehicleRecord>
+
     suspend fun addVehicle(name: String, licensePlate: String, imageFile: File): Result<VehicleRecord>
 
     suspend fun getVehicle(vehicleId: Int): Result<VehicleRecord>

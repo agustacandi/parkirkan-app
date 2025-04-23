@@ -11,10 +11,10 @@ data class VehicleResponse(
 data class VehicleData(
     @Json(name = "current_page")
     val currentPage: Int,
-    val data: List<VehicleRecord>,
+    val data: List<VehicleRecord> = emptyList(),
     @Json(name = "first_page_url")
     val firstPageUrl: String,
-    val from: Int,
+    val from: Int? = null,
     @Json(name = "last_page")
     val lastPage: Int,
     @Json(name = "last_page_url")
@@ -27,7 +27,7 @@ data class VehicleData(
     val perPage: Int,
     @Json(name = "prev_page_url")
     val prevPageUrl: String?,
-    val to: Int,
+    val to: Int? = null,
     val total: Int
 )
 
@@ -69,4 +69,10 @@ data class SingleVehicleResponse(
 data class DeleteVehicleResponse(
     val success: Boolean,
     val message: String
+)
+
+data class AllVehiclesResponse(
+    val success: Boolean,
+    val message: String,
+    val data: List<VehicleRecord>
 )

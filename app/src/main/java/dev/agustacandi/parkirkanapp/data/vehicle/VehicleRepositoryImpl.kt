@@ -46,6 +46,20 @@ class VehicleRepositoryImpl @Inject constructor(private val vehicleService: Vehi
             .cachedIn(scope)
     }
 
+    override suspend fun getVehiclesList(): List<VehicleRecord> = withContext(Dispatchers.IO) {
+        try {
+            val response = vehicleService.getAllVehicles()
+
+            if (!response.success) {
+                throw Exception(response.message)
+            }
+
+            return@withContext response.data
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
     override suspend fun addVehicle(
         name: String,
         licensePlate: String,

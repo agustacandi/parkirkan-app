@@ -7,4 +7,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface ParkingRepository {
     fun getParkingRecords(pageSize: Int = 5, scope: CoroutineScope): Flow<PagingData<ParkingRecord>>
+
+    suspend fun isVehicleCheckedIn(licensePlate: String): Boolean
+
+    suspend fun confirmCheckOut(licensePlate: String): Boolean
 }

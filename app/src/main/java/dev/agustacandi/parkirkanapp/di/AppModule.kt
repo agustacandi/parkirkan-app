@@ -9,11 +9,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.agustacandi.parkirkanapp.data.auth.AuthRepositoryImpl
 import dev.agustacandi.parkirkanapp.data.auth.network.AuthService
+import dev.agustacandi.parkirkanapp.data.broadcast.BroadcastRepositoryImpl
+import dev.agustacandi.parkirkanapp.data.broadcast.network.BroadcastService
 import dev.agustacandi.parkirkanapp.data.parking.ParkingRepositoryImpl
 import dev.agustacandi.parkirkanapp.data.parking.network.ParkingService
 import dev.agustacandi.parkirkanapp.data.vehicle.VehicleRepositoryImpl
 import dev.agustacandi.parkirkanapp.data.vehicle.network.VehicleService
 import dev.agustacandi.parkirkanapp.domain.auth.repository.AuthRepository
+import dev.agustacandi.parkirkanapp.domain.broadcast.BroadcastRepository
 import dev.agustacandi.parkirkanapp.domain.parking.repository.ParkingRepository
 import dev.agustacandi.parkirkanapp.domain.vehicle.VehicleRepository
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
@@ -46,7 +49,7 @@ class AppModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://focus-howard-such-acid.trycloudflare.com/api/")
+            .baseUrl("https://lessons-liquid-medieval-work.trycloudflare.com/api/")
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .client(okHttpClient)
             .build()
@@ -94,6 +97,11 @@ class AppModule {
     fun provideVehicleService(retrofit: Retrofit): VehicleService =
         retrofit.create(VehicleService::class.java)
 
+    @Provides
+    @Singleton
+    fun provideBroadcastService(retrofit: Retrofit): BroadcastService =
+        retrofit.create(BroadcastService::class.java)
+
     // Repository
     @Provides
     @Singleton
@@ -116,5 +124,10 @@ class AppModule {
         vehicleService: VehicleService,
     ): VehicleRepository =
         VehicleRepositoryImpl(vehicleService)
+
+    @Provides
+    @Singleton
+    fun provideBroadcastRepository(broadcastService: BroadcastService): BroadcastRepository =
+        BroadcastRepositoryImpl(broadcastService)
 
 }
