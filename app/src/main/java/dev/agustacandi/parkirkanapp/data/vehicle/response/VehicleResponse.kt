@@ -57,3 +57,16 @@ data class AddVehicleResponse(
     val data: VehicleRecord,
     val message: String
 )
+
+// Single vehicle response for getting and updating vehicles
+data class SingleVehicleResponse(
+    val success: Boolean,
+    val data: VehicleRecord,
+    val message: String
+)
+
+// Response for delete operations
+data class DeleteVehicleResponse(
+    val success: Boolean,
+    val message: String
+)

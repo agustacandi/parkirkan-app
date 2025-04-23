@@ -16,41 +16,53 @@ import javax.inject.Inject
 class VehicleViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
 ) : ViewModel() {
-    // State untuk status loading
+    // State for loading status
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // State untuk error
+    // State for error messages
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // Flow untuk data parking
-    private var _vehicleRecordsFlow: Flow<PagingData<VehicleRecord>>? = null
+    // Flow for vehicle data
+    private var _vehiclesFlow: Flow<PagingData<VehicleRecord>>? = null
 
-    fun getParkingRecords(pageSize: Int = 5): Flow<PagingData<VehicleRecord>> {
-        val existingResult = _vehicleRecordsFlow
+    /**
+     * Retrieves a flow of paged vehicle data.
+     * If the data is already loaded, returns cached data.
+     * Otherwise, loads new data from the repository.
+     */
+    fun getVehicles(pageSize: Int = 5): Flow<PagingData<VehicleRecord>> {
+        val existingResult = _vehiclesFlow
         if (existingResult != null) {
             return existingResult
         }
 
         val newResult = vehicleRepository.getVehicles(pageSize, viewModelScope)
-        _vehicleRecordsFlow = newResult
+        _vehiclesFlow = newResult
         return newResult
     }
 
-    // Function untuk refresh data jika diperlukan
+    /**
+     * Refreshes the vehicle data by clearing the cache and forcing a reload.
+     */
     fun refreshData() {
-        _vehicleRecordsFlow = null
-        // Reset error jika ada
+        _vehiclesFlow = null
+        // Reset error if present
         _errorMessage.value = null
     }
 
-    // Function untuk menangani error
-    fun handleError(error: String) {
+    /**
+     * Handles errors by updating the error message state.
+     * Pass null to clear the error.
+     */
+    fun handleError(error: String?) {
         _errorMessage.value = error
     }
 
-    // Function untuk memulai loading state
+    /**
+     * Sets the loading state.
+     */
     fun setLoading(isLoading: Boolean) {
         _isLoading.value = isLoading
     }

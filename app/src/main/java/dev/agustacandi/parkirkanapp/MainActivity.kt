@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -38,7 +37,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -55,8 +53,11 @@ import dev.agustacandi.parkirkanapp.presentation.auth.LogoutState
 import dev.agustacandi.parkirkanapp.presentation.home.HomeScreen
 import dev.agustacandi.parkirkanapp.presentation.parking.ParkingScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.ProfileScreen
+import dev.agustacandi.parkirkanapp.presentation.profile.about.AboutScreen
+import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePasswordScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.VehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
+import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
 import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
@@ -250,27 +251,38 @@ fun ParkingAppNavHost(
                 }
             )
         ) { backStackEntry ->
-            val vehicleId =
-                backStackEntry.arguments?.getString(NavDestination.EditVehicle.ARG_VEHICLE_ID) ?: ""
-//            EditVehicleScreen(
-//                vehicleId = vehicleId,
-//                onNavigateBack = { navController.navigateUp() },
-//                onVehicleUpdated = { navController.navigateUp() }
-//            )
+            val vehicleId = backStackEntry.arguments?.getString(NavDestination.EditVehicle.ARG_VEHICLE_ID) ?: ""
+            EditVehicleScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onVehicleUpdated = {
+                    // Set refresh flag and navigate back
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_vehicles", true)
+                    navController.navigateUp()
+                },
+                onVehicleDeleted = {
+                    // Set refresh flag and navigate back
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_vehicles", true)
+                    navController.navigateUp()
+                }
+            )
         }
 
         // Change Password Screen
         composable(NavDestination.ChangePassword.route) {
-//            ChangePasswordScreen(
-//                onNavigateBack = { navController.navigateUp() }
-//            )
+            ChangePasswordScreen(
+                onNavigateBack = { navController.navigateUp() }
+            )
         }
 
         // About Screen
         composable(NavDestination.About.route) {
-//            AboutScreen(
-//                onNavigateBack = { navController.navigateUp() }
-//            )
+            AboutScreen(
+                onNavigateBack = { navController.navigateUp() }
+            )
         }
     }
 }

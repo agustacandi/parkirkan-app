@@ -22,6 +22,12 @@ interface AuthService {
         @Path("userId") userId: String,
         @Body request: UpdateFcmTokenRequest
     ): Response<Void>
+
+    @POST("change-password")
+    suspend fun changePassword(
+        @Body request: ChangePasswordRequest
+    ): Response<Void>
+
 }
 
 data class LoginRequest(
@@ -34,4 +40,11 @@ data class LoginRequest(
 data class UpdateFcmTokenRequest(
     @Json(name = "fcm_token")
     val fcmToken: String
+)
+
+data class ChangePasswordRequest(
+    @Json(name = "old_password")
+    val oldPassword: String,
+    @Json(name = "new_password")
+    val newPassword: String
 )

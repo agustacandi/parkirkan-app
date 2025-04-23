@@ -10,6 +10,8 @@ interface AuthRepository {
 
     fun updateFcmToken(fcmToken: String): Flow<Result<Unit>>
 
+    fun changePassword(oldPassword: String, newPassword: String): Flow<Result<Unit>>
+
     fun getCurrentUser(): Flow<Data?>
 
     fun isLoggedIn(): Flow<Boolean>

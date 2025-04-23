@@ -14,8 +14,12 @@ interface VehicleRepository {
 
     suspend fun addVehicle(name: String, licensePlate: String, imageFile: File): Result<VehicleRecord>
 
+    suspend fun getVehicle(vehicleId: Int): Result<VehicleRecord>
 
-//    suspend fun addVehicle(vehicle: Vehicle): Vehicle
-//    suspend fun updateVehicle(vehicle: Vehicle): Vehicle
-//    suspend fun deleteVehicle(vehicleId: Int): Boolean
+    suspend fun updateVehicle(vehicleId: Int, name: String, licensePlate: String, imageFile: File): Result<VehicleRecord>
+
+    suspend fun updateVehicleWithoutImage(vehicleId: Int, name: String, licensePlate: String): Result<VehicleRecord>
+
+    suspend fun deleteVehicle(vehicleId: Int): Result<Unit>
+
 }
