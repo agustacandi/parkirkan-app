@@ -72,13 +72,13 @@ fun HomeScreen(onNavigateToBroadcast: () -> Unit) {
             Text("Welcome to Parkirkan App", modifier = Modifier.padding(16.dp))
             Row {
                 Button(modifier = Modifier.padding(16.dp), onClick = {}) {
-                    Text("Check In")
+                    Text("Confirm Check Out")
                 }
                 Button(
                     modifier = Modifier.padding(16.dp),
                     onClick = { showBottomSheet = true }
                 ) {
-                    Text("Pilih Kendaraan")
+                    Text("Choose Vehicle")
                 }
             }
 
