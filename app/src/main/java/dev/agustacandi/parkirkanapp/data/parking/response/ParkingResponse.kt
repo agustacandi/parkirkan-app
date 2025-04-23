@@ -41,6 +41,8 @@ data class ParkingRecord(
 	val checkOutTime: String? = null,
 	@Json(name = "check_out_image")
 	val checkOutImage: String? = null,
+	@Json(name = "is_check_out_confirmed")
+	val isCheckOutConfirmed: Boolean,
 	val status: String,
 	@Json(name = "vehicle_id")
 	val vehicleId: Int,
