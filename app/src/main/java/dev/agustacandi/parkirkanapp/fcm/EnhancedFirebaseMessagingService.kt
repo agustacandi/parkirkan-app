@@ -182,7 +182,7 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
 
             // Intent for when notification is clicked
             val intent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 action = "OPEN_NOTIFICATION" // Special action for intent filter
                 putExtra("notification_type", "alert")
 

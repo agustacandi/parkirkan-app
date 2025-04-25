@@ -64,6 +64,8 @@ class MainActivity : ComponentActivity() {
         // Setup FCM
         setupFCM()
 
+        handleNotificationIntent(intent)
+
         setContent {
             ParkirkanAppTheme {
                 RequestNotificationPermission()
@@ -76,10 +78,13 @@ class MainActivity : ComponentActivity() {
                 // Handle navigation events
                 LaunchedEffect(navEvent) {
                     navEvent?.let { destination ->
+                        Log.d("MainActivity", "Navigating to: $destination")
                         // Navigate to the destination
                         navController.navigate(destination) {
-                            // Add navigation options if needed
-                            popUpTo(NavDestination.Main.route) { inclusive = false }
+                            // Clear back stack when navigating to Alert screen
+                            if (destination == NavDestination.Alert.route) {
+                                popUpTo(NavDestination.Main.route) { inclusive = false }
+                            }
                         }
 
                         // Reset the navigation event
@@ -140,10 +145,15 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNotificationIntent(intent: Intent?) {
         intent?.let {
-            when {
-                it.action == "OPEN_NOTIFICATION" &&
-                        it.getStringExtra("notification_type") == "alert" -> {
+            Log.d("MainActivity", "Handling intent: ${it.action}, extras: ${it.extras}")
+
+            if (it.action == "OPEN_NOTIFICATION") {
+                val notificationType = it.getStringExtra("notification_type")
+                Log.d("MainActivity", "Notification type: $notificationType")
+
+                if (notificationType == "alert") {
                     _navigationEvent.value = NavDestination.Alert.route
+                    Log.d("MainActivity", "Setting navigation event to: ${_navigationEvent.value}")
                 }
             }
         }
