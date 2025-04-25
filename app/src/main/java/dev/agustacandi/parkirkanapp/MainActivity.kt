@@ -32,11 +32,14 @@ import dev.agustacandi.parkirkanapp.presentation.auth.LoginState
 import dev.agustacandi.parkirkanapp.presentation.main.MainScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.about.AboutScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePasswordScreen
+import dev.agustacandi.parkirkanapp.presentation.settings.BatteryOptimizationDialog
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
+import dev.agustacandi.parkirkanapp.util.BatteryOptimizationChecker
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
 import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +57,10 @@ class MainActivity : ComponentActivity() {
     private val _navigationEvent = MutableStateFlow<String?>(null)
     private val navigationEvent: StateFlow<String?> = _navigationEvent.asStateFlow()
 
+    // Add state for battery dialog
+    private val _showBatteryDialog = MutableStateFlow(false)
+    private val showBatteryDialog: StateFlow<Boolean> = _showBatteryDialog.asStateFlow()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -66,6 +73,9 @@ class MainActivity : ComponentActivity() {
 
         handleNotificationIntent(intent)
 
+        // Check battery optimization status
+        checkBatteryOptimization()
+
         setContent {
             ParkirkanAppTheme {
                 RequestNotificationPermission()
@@ -74,16 +84,26 @@ class MainActivity : ComponentActivity() {
                 val loginState by authViewModel.loginState.collectAsState()
                 // Collect navigation events from intents
                 val navEvent by navigationEvent.collectAsState()
+                val shouldShowBatteryDialog by showBatteryDialog.collectAsState()
+
+                // Show battery optimization dialog if needed
+                if (shouldShowBatteryDialog) {
+                    BatteryOptimizationDialog(
+                        onDismiss = { _showBatteryDialog.value = false }
+                    )
+                }
 
                 // Handle navigation events
                 LaunchedEffect(navEvent) {
                     navEvent?.let { destination ->
                         Log.d("MainActivity", "Navigating to: $destination")
+                        // Wait for login state to be determined before navigating
+                        delay(300) // Small delay to ensure login state is processed
                         // Navigate to the destination
                         navController.navigate(destination) {
                             // Clear back stack when navigating to Alert screen
                             if (destination == NavDestination.Alert.route) {
-                                popUpTo(NavDestination.Main.route) { inclusive = false }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = false }
                             }
                         }
 
@@ -147,14 +167,27 @@ class MainActivity : ComponentActivity() {
         intent?.let {
             Log.d("MainActivity", "Handling intent: ${it.action}, extras: ${it.extras}")
 
-            if (it.action == "OPEN_NOTIFICATION") {
+            if (it.action == "OPEN_NOTIFICATION" || it.getBooleanExtra("notification_opened", false)) {
+                // Check for both notification_type and target_route to be more explicit
                 val notificationType = it.getStringExtra("notification_type")
-                Log.d("MainActivity", "Notification type: $notificationType")
+                val targetRoute = it.getStringExtra("target_route")
 
-                if (notificationType == "alert") {
+                Log.d("MainActivity", "Notification type: $notificationType, Target route: $targetRoute")
+
+                if (notificationType == "alert" || targetRoute == NavDestination.Alert.route) {
                     _navigationEvent.value = NavDestination.Alert.route
                     Log.d("MainActivity", "Setting navigation event to: ${_navigationEvent.value}")
                 }
+            }
+        }
+    }
+
+    private fun checkBatteryOptimization() {
+        if (!BatteryOptimizationChecker.isIgnoringBatteryOptimizations(this)) {
+            // App is under battery optimization - show dialog after a delay to avoid blocking app start
+            lifecycleScope.launch {
+                delay(1000) // Show dialog after a short delay
+                _showBatteryDialog.value = true
             }
         }
     }

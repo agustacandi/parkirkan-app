@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
@@ -25,9 +26,6 @@ import dev.agustacandi.parkirkanapp.domain.auth.repository.AuthRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -151,15 +149,18 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
                 val highPriorityChannel = NotificationChannel(
                     CHANNEL_ID,
                     CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_HIGH
+                    NotificationManager.IMPORTANCE_HIGH // Use HIGH for better compatibility
                 ).apply {
                     description = CHANNEL_DESCRIPTION
                     enableVibration(true)
-                    setSound(soundUri, audioAttributes)
                     vibrationPattern = longVibrationPattern
+                    setSound(soundUri, audioAttributes)
                     setBypassDnd(true) // Bypass Do Not Disturb
                     enableLights(true)
+                    lightColor = Color.RED
                     lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                    importance = NotificationManager.IMPORTANCE_HIGH // Ensure it's set to HIGH
+                    setShowBadge(true)
                 }
 
                 // Register channel
@@ -183,9 +184,9 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
             // Intent for when notification is clicked
             val intent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                action = "OPEN_NOTIFICATION" // Special action for intent filter
-                putExtra("notification_type", "alert")
-
+                putExtra("notification_opened", true)
+                putExtra("notification_type", "alert") // Specify the type clearly
+                putExtra("target_route", NavDestination.Alert.route) // Add explicit route information
 
                 // Add deep link data if available
                 deepLinkData?.forEach { (key, value) ->
@@ -225,6 +226,14 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setFullScreenIntent(pendingIntent, true) // Full screen intent for heads-up
+
+            // Make notification display even when app is in foreground on Android 13+
+            if (Build.VERSION.SDK_INT >= 33) {
+                notificationBuilder.setForegroundServiceBehavior(
+                    NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE
+                )
+            }
+
 
             // Trigger system vibration
             triggerSystemVibration(vibrationPattern)
