@@ -1,5 +1,6 @@
 package dev.agustacandi.parkirkanapp
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
+import dev.agustacandi.parkirkanapp.presentation.alert.AlertScreen
 import dev.agustacandi.parkirkanapp.presentation.splash.SplashScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthScreen
 import dev.agustacandi.parkirkanapp.presentation.auth.AuthViewModel
@@ -35,6 +37,9 @@ import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
 import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,6 +50,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var fcmTokenManager: FCMTokenManager
+
+    private val _navigationEvent = MutableStateFlow<String?>(null)
+    private val navigationEvent: StateFlow<String?> = _navigationEvent.asStateFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +70,22 @@ class MainActivity : ComponentActivity() {
 
                 val navController = rememberNavController()
                 val loginState by authViewModel.loginState.collectAsState()
+                // Collect navigation events from intents
+                val navEvent by navigationEvent.collectAsState()
+
+                // Handle navigation events
+                LaunchedEffect(navEvent) {
+                    navEvent?.let { destination ->
+                        // Navigate to the destination
+                        navController.navigate(destination) {
+                            // Add navigation options if needed
+                            popUpTo(NavDestination.Main.route) { inclusive = false }
+                        }
+
+                        // Reset the navigation event
+                        _navigationEvent.value = null
+                    }
+                }
 
                 LaunchedEffect(loginState) {
                     when (loginState) {
@@ -91,6 +115,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
     private fun setupFCM() {
         // Subscribe ke topik umum jika diperlukan
         FirebaseMessaging.getInstance().subscribeToTopic("broadcast")
@@ -104,6 +133,17 @@ class MainActivity : ComponentActivity() {
                     } else {
                         Log.e("FCM", "Failed to get FCM token", result.exceptionOrNull())
                     }
+                }
+            }
+        }
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        intent?.let {
+            when {
+                it.action == "OPEN_NOTIFICATION" &&
+                        it.getStringExtra("notification_type") == "alert" -> {
+                    _navigationEvent.value = NavDestination.Alert.route
                 }
             }
         }
@@ -128,10 +168,7 @@ sealed class NavDestination(val route: String) {
     // Sub-destinations
     data object Broadcast : NavDestination("broadcast")
 
-    data object HistoryDetail : NavDestination("history_detail/{historyId}") {
-        fun createRoute(historyId: String) = "history_detail/$historyId"
-        const val ARG_HISTORY_ID = "historyId"
-    }
+    data object Alert : NavDestination("alert")
 
     data object AddVehicle : NavDestination("add_vehicle")
 
@@ -160,6 +197,20 @@ fun ParkingAppNavHost(
         // Splash Screen
         composable(NavDestination.Splash.route) {
             SplashScreen()
+        }
+
+        // Alert Screen
+        composable(NavDestination.Alert.route) {
+            AlertScreen(
+                onConfirmClick = {
+                    // Handle confirmation - navigate back to main
+                    navController.popBackStack(NavDestination.Main.route, false)
+                },
+                onRejectClick = {
+                    // Handle rejection - just go back
+                    navController.popBackStack()
+                }
+            )
         }
 
         // Login Screen
@@ -206,8 +257,7 @@ fun ParkingAppNavHost(
                     type = NavType.StringType
                 }
             )
-        ) { backStackEntry ->
-            val vehicleId = backStackEntry.arguments?.getString(NavDestination.EditVehicle.ARG_VEHICLE_ID) ?: ""
+        ) { _ ->
             EditVehicleScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onVehicleUpdated = {

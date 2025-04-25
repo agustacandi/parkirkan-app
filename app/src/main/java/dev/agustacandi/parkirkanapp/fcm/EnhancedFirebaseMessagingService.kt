@@ -19,11 +19,15 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
 import dev.agustacandi.parkirkanapp.MainActivity
+import dev.agustacandi.parkirkanapp.NavDestination
 import dev.agustacandi.parkirkanapp.R
 import dev.agustacandi.parkirkanapp.domain.auth.repository.AuthRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -36,6 +40,7 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var authRepository: AuthRepository
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
 
     companion object {
         private const val TAG = "EnhancedFCM"
@@ -178,8 +183,9 @@ class EnhancedFirebaseMessagingService : FirebaseMessagingService() {
             // Intent for when notification is clicked
             val intent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                action = "OPEN_FROM_NOTIFICATION" // Special action for intent filter
-                putExtra("notification_opened", true)
+                action = "OPEN_NOTIFICATION" // Special action for intent filter
+                putExtra("notification_type", "alert")
+
 
                 // Add deep link data if available
                 deepLinkData?.forEach { (key, value) ->
