@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -32,6 +33,9 @@ import dev.agustacandi.parkirkanapp.presentation.auth.LoginState
 import dev.agustacandi.parkirkanapp.presentation.main.MainScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.about.AboutScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePasswordScreen
+import dev.agustacandi.parkirkanapp.presentation.security.SecurityMainScreen
+import dev.agustacandi.parkirkanapp.presentation.security.broadcast.add.AddBroadcastScreen
+import dev.agustacandi.parkirkanapp.presentation.security.broadcast.edit.EditBroadcastScreen
 import dev.agustacandi.parkirkanapp.presentation.settings.BatteryOptimizationDialog
 import dev.agustacandi.parkirkanapp.presentation.settings.MiuiSettingsDialog
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
@@ -135,7 +139,9 @@ class MainActivity : ComponentActivity() {
                         navController.navigate(destination) {
                             // Clear back stack when navigating to Alert screen
                             if (destination == NavDestination.Alert.route) {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = false
+                                }
                             }
                         }
 
@@ -151,9 +157,21 @@ class MainActivity : ComponentActivity() {
                                 popUpTo(NavDestination.Splash.route) { inclusive = true }
                             }
                         }
+
                         is LoginState.AlreadyLoggedIn -> {
-                            navController.navigate(NavDestination.Main.route) {
-                                popUpTo(NavDestination.Login.route) { inclusive = true }
+                            // Check user role to determine where to navigate
+                            val userRole = (loginState as LoginState.AlreadyLoggedIn).userRole
+
+                            if (userRole == "security") {
+                                FirebaseMessaging.getInstance().subscribeToTopic("alert")
+                                navController.navigate(NavDestination.SecurityNav.Home.route) {
+                                    popUpTo(NavDestination.Login.route) { inclusive = true }
+                                }
+                            } else {
+                                // Default for "user" role
+                                navController.navigate(NavDestination.Main.route) {
+                                    popUpTo(NavDestination.Login.route) { inclusive = true }
+                                }
                             }
                         }
 
@@ -164,6 +182,7 @@ class MainActivity : ComponentActivity() {
                         else -> {}
                     }
                 }
+
                 ParkingAppNavHost(
                     navController = navController,
                     modifier = Modifier.fillMaxSize(),
@@ -208,7 +227,10 @@ class MainActivity : ComponentActivity() {
                 val targetRoute = it.getStringExtra("target_route")
                 val timestamp = it.getLongExtra("timestamp", 0)
 
-                Log.d("MainActivity", "Notification: type=$notificationType, route=$targetRoute, time=$timestamp")
+                Log.d(
+                    "MainActivity",
+                    "Notification: type=$notificationType, route=$targetRoute, time=$timestamp"
+                )
 
                 // Handle alert notifications
                 if (notificationType == "alert" || targetRoute == NavDestination.Alert.route) {
@@ -247,6 +269,19 @@ sealed class NavDestination(val route: String) {
         data object Parking : BottomNav("parking")
         data object Vehicle : BottomNav("vehicle")
         data object Profile : BottomNav("profile")
+    }
+
+    sealed class SecurityNav(route: String) : NavDestination(route) {
+        data object Home : SecurityNav("security_home")
+        data object Broadcast : SecurityNav("security_broadcast")
+        data object Profile : SecurityNav("security_profile")
+    }
+
+    data object AddBroadcast : NavDestination("add_broadcast")
+
+    data object EditBroadcast : NavDestination("edit_broadcast/{broadcastId}") {
+        fun createRoute(broadcastId: String) = "edit_broadcast/$broadcastId"
+        const val ARG_BROADCAST_ID = "broadcastId"
     }
 
     // Sub-destinations
@@ -310,7 +345,20 @@ fun ParkingAppNavHost(
 
         // Main Screen dengan Bottom Navigation
         composable(NavDestination.Main.route) {
-            MainScreen(navController)
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val loginState by authViewModel.loginState.collectAsState()
+
+            // Get user role from login state
+            val userRole = when (loginState) {
+                is LoginState.AlreadyLoggedIn -> (loginState as LoginState.AlreadyLoggedIn).userRole
+                else -> "user" // Default role
+            }
+
+            RoleBasedMainScreen(role = userRole, navController = navController)
+        }
+
+        composable(NavDestination.SecurityNav.Home.route) {
+            SecurityMainScreen(navController)
         }
 
         // Broadcast Screen
@@ -331,7 +379,8 @@ fun ParkingAppNavHost(
                         ?.set("refresh_vehicles", true)
                     navController.navigateUp()
                 }
-            )        }
+            )
+        }
 
         // Edit Vehicle Screen dengan parameter
         composable(
@@ -374,5 +423,63 @@ fun ParkingAppNavHost(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
+
+        // Add this to MainActivity.kt in the ParkingAppNavHost function
+
+// Inside NavHost composable, add these routes
+        composable(NavDestination.SecurityNav.Home.route) {
+            SecurityMainScreen(navController)
+        }
+
+        composable(NavDestination.AddBroadcast.route) {
+            AddBroadcastScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onBroadcastAdded = {
+                    // Trigger refresh on returning to broadcast list
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_broadcasts", true)
+                    navController.navigateUp()
+                }
+            )
+        }
+
+        composable(
+            route = NavDestination.EditBroadcast.route,
+            arguments = listOf(
+                navArgument(NavDestination.EditBroadcast.ARG_BROADCAST_ID) {
+                    type = NavType.StringType
+                }
+            )
+        ) { _ ->
+            EditBroadcastScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onBroadcastUpdated = {
+                    // Trigger refresh on returning to broadcast list
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_broadcasts", true)
+                    navController.navigateUp()
+                },
+                onBroadcastDeleted = {
+                    // Trigger refresh on returning to broadcast list
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_broadcasts", true)
+                    navController.navigateUp()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun RoleBasedMainScreen(
+    role: String,
+    navController: NavHostController
+) {
+    when (role) {
+        "security" -> SecurityMainScreen(navController)
+        else -> MainScreen(navController) // Default for "user" role
     }
 }

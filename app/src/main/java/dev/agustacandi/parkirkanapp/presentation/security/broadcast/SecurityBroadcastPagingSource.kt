@@ -1,4 +1,4 @@
-package dev.agustacandi.parkirkanapp.presentation.broadcast
+package dev.agustacandi.parkirkanapp.presentation.security.broadcast
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
@@ -7,7 +7,7 @@ import dev.agustacandi.parkirkanapp.presentation.home.Broadcast
 import retrofit2.HttpException
 import java.io.IOException
 
-class BroadcastPagingSource(
+class SecurityBroadcastPagingSource(
     private val broadcastService: BroadcastService,
     private val pageSize: Int
 ) : PagingSource<Int, Broadcast>() {

@@ -49,3 +49,16 @@ data class BroadcastPageLink(
     val label: String,
     val active: Boolean
 )
+
+// Single broadcast response
+data class SingleBroadcastResponse(
+    val success: Boolean,
+    val data: BroadcastRecord,
+    val message: String
+)
+
+// Response for delete operations
+data class DeleteBroadcastResponse(
+    val success: Boolean,
+    val message: String
+)

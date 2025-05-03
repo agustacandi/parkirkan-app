@@ -93,7 +93,10 @@ class AuthViewModel @Inject constructor(
                 val isLoggedIn = authRepository.isLoggedIn().first()
                 Log.d("AuthViewModel", "isLoggedIn: $isLoggedIn")
                 if (isLoggedIn) {
-                    _loginState.value = LoginState.AlreadyLoggedIn
+                    // Get current user to check role
+                    val user = authRepository.getCurrentUser().first()
+                    // Set role in login state (default to "user" if role is null)
+                    _loginState.value = LoginState.AlreadyLoggedIn(user?.role ?: "user")
                 } else {
                     _loginState.value = LoginState.Login
                 }
@@ -109,7 +112,7 @@ sealed class LoginState {
     data object Login: LoginState()
     data object Loading : LoginState()
     data object Success : LoginState()
-    data object AlreadyLoggedIn : LoginState()
+    data class AlreadyLoggedIn(val userRole: String) : LoginState()
     data class Error(val message: String) : LoginState()
 }
 
