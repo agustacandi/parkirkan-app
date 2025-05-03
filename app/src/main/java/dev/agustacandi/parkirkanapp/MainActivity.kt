@@ -33,11 +33,13 @@ import dev.agustacandi.parkirkanapp.presentation.main.MainScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.about.AboutScreen
 import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePasswordScreen
 import dev.agustacandi.parkirkanapp.presentation.settings.BatteryOptimizationDialog
+import dev.agustacandi.parkirkanapp.presentation.settings.MiuiSettingsDialog
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
 import dev.agustacandi.parkirkanapp.util.BatteryOptimizationChecker
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
+import dev.agustacandi.parkirkanapp.util.MiuiHelper
 import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +63,26 @@ class MainActivity : ComponentActivity() {
     private val _showBatteryDialog = MutableStateFlow(false)
     private val showBatteryDialog: StateFlow<Boolean> = _showBatteryDialog.asStateFlow()
 
+    private val _showMiuiDialog = MutableStateFlow(false)
+    private val showMiuiDialog: StateFlow<Boolean> = _showMiuiDialog.asStateFlow()
+
+    private fun checkDeviceSettings() {
+        // Check MIUI device
+        if (MiuiHelper.isMiuiDevice()) {
+            // Show dialog after a delay to avoid blocking app start
+            lifecycleScope.launch {
+                delay(1000)
+                _showMiuiDialog.value = true
+            }
+        } else if (!BatteryOptimizationChecker.isIgnoringBatteryOptimizations(this)) {
+            // Regular battery optimization dialog for non-MIUI devices
+            lifecycleScope.launch {
+                delay(1000)
+                _showBatteryDialog.value = true
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -72,6 +94,8 @@ class MainActivity : ComponentActivity() {
         setupFCM()
 
         handleNotificationIntent(intent)
+
+        checkDeviceSettings()
 
         // Check battery optimization status
         checkBatteryOptimization()
@@ -85,6 +109,14 @@ class MainActivity : ComponentActivity() {
                 // Collect navigation events from intents
                 val navEvent by navigationEvent.collectAsState()
                 val shouldShowBatteryDialog by showBatteryDialog.collectAsState()
+                val shouldShowMiuiDialog by showMiuiDialog.collectAsState()
+
+                if (shouldShowMiuiDialog) {
+                    MiuiSettingsDialog(
+                        onDismiss = { _showMiuiDialog.value = false }
+                    )
+                }
+
 
                 // Show battery optimization dialog if needed
                 if (shouldShowBatteryDialog) {
@@ -142,6 +174,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Save the new intent
+        setIntent(intent)
         handleNotificationIntent(intent)
     }
 
@@ -165,18 +199,25 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNotificationIntent(intent: Intent?) {
         intent?.let {
-            Log.d("MainActivity", "Handling intent: ${it.action}, extras: ${it.extras}")
+            Log.d("MainActivity", "Intent received: action=${it.action}, extras=${it.extras}")
 
-            if (it.action == "OPEN_NOTIFICATION" || it.getBooleanExtra("notification_opened", false)) {
-                // Check for both notification_type and target_route to be more explicit
+            // Check if this is from a notification
+            if (it.getBooleanExtra("notification_opened", false)) {
+                // Get notification type and target route
                 val notificationType = it.getStringExtra("notification_type")
                 val targetRoute = it.getStringExtra("target_route")
+                val timestamp = it.getLongExtra("timestamp", 0)
 
-                Log.d("MainActivity", "Notification type: $notificationType, Target route: $targetRoute")
+                Log.d("MainActivity", "Notification: type=$notificationType, route=$targetRoute, time=$timestamp")
 
+                // Handle alert notifications
                 if (notificationType == "alert" || targetRoute == NavDestination.Alert.route) {
-                    _navigationEvent.value = NavDestination.Alert.route
-                    Log.d("MainActivity", "Setting navigation event to: ${_navigationEvent.value}")
+                    // Set navigation event with a small delay to ensure app is ready
+                    lifecycleScope.launch {
+                        delay(100)
+                        _navigationEvent.value = NavDestination.Alert.route
+                        Log.d("MainActivity", "Navigation set to Alert")
+                    }
                 }
             }
         }

@@ -6,7 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface BroadcastService {
-    @GET("broadcast")
+    @GET("broadcast-all")
     suspend fun getBroadcasts(
         @Query("page") page: Int,
         @Query("per_page") perPage: Int

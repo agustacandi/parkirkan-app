@@ -47,7 +47,8 @@
 
         <!-- Firebase Messaging Service -->
         <service
-            android:name=".fcm.EnhancedFirebaseMessagingService"
+            android:name=".fcm.ParkirkanMessagingService"
+            android:directBootAware="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -67,7 +68,7 @@
         <!-- Default notification channel ID - Untuk API 26+ -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="fcm_notification_channel" />
+            android:value="parkirkan_notification_channel" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

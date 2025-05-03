@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import java.util.Locale
 
 /**
  * Utility to check and handle battery optimization settings
@@ -85,7 +86,7 @@ object BatteryOptimizationChecker {
     }
 
     // Helper methods to detect manufacturer
-    private fun isMiui(): Boolean = Build.MANUFACTURER.toLowerCase().contains("xiaomi")
-    private fun isSamsung(): Boolean = Build.MANUFACTURER.toLowerCase().contains("samsung")
-    private fun isHuawei(): Boolean = Build.MANUFACTURER.toLowerCase().contains("huawei")
+    private fun isMiui(): Boolean = Build.MANUFACTURER.lowercase(Locale.ROOT).contains("xiaomi")
+    private fun isSamsung(): Boolean = Build.MANUFACTURER.lowercase().contains("samsung")
+    private fun isHuawei(): Boolean = Build.MANUFACTURER.lowercase().contains("huawei")
 }
