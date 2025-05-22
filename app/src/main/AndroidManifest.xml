@@ -34,13 +34,21 @@
             android:theme="@style/Theme.ParkirkanApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Enhanced notification intent filter -->
             <intent-filter>
                 <action android:name="OPEN_NOTIFICATION" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            
+            <!-- Special intent filter for alert notifications -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="parkirkanapp" android:host="alert" />
             </intent-filter>
 
         </activity>
@@ -55,17 +63,17 @@
             </intent-filter>
         </service>
 
-        <!-- Default notification icon - Opsional -->
+        <!-- Default notification icon -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notifications" />
 
-        <!-- Default notification color - Opsional -->
+        <!-- Default notification color -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/colorAccent" />
 
-        <!-- Default notification channel ID - Untuk API 26+ -->
+        <!-- Default notification channel ID for API 26+ -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="parkirkan_notification_channel" />

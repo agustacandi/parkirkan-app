@@ -1,12 +1,35 @@
 package dev.agustacandi.parkirkanapp.presentation.parking
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +43,7 @@ import coil3.compose.AsyncImage
 import dev.agustacandi.parkirkanapp.data.parking.response.ParkingRecord
 import dev.agustacandi.parkirkanapp.util.ext.checkHttps
 import dev.agustacandi.parkirkanapp.util.ext.formatDateTime
+import dev.agustacandi.parkirkanapp.presentation.common.ErrorItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,11 +52,11 @@ fun ParkingScreen(
 ) {
     val parkingItems = viewModel.getParkingRecords().collectAsLazyPagingItems()
 
-    // Collect state dari ViewModel menggunakan collectAsState
+    // Collect state from ViewModel using collectAsState
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
-    // Effect untuk mengupdate loading state berdasarkan Paging
+    // Effect to update loading state based on paging
     LaunchedEffect(parkingItems.loadState) {
         when (val refresh = parkingItems.loadState.refresh) {
             is LoadState.Loading -> viewModel.setLoading(true)
@@ -45,7 +69,7 @@ fun ParkingScreen(
     }
 
     Scaffold { paddingValues ->
-        // Menggunakan PullToRefreshBox untuk implementasi pull-to-refresh
+        // Using PullToRefreshBox for pull-to-refresh implementation
         PullToRefreshBox(
             onRefresh = {
                 viewModel.refreshData()
@@ -101,15 +125,15 @@ fun ParkingScreen(
                             TextButton(onClick = { viewModel.handleError("") }) {
                                 Text("Dismiss")
                             }
-                        }
+                        },
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
                     ) {
                         Text(it)
                     }
                 }
             }
         }
-
-        // Tampilkan error message jika ada
     }
 }
 
@@ -117,6 +141,14 @@ fun ParkingScreen(
 fun ParkingRecordItem(parkingRecord: ParkingRecord) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Column(
             modifier = Modifier
@@ -144,7 +176,7 @@ fun ParkingRecordItem(parkingRecord: ParkingRecord) {
                     modifier = Modifier
                         .weight(1f)
                         .height(120.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                 ) {
                     AsyncImage(
                         parkingRecord.checkInImage.checkHttps(),
@@ -159,22 +191,22 @@ fun ParkingRecordItem(parkingRecord: ParkingRecord) {
                             .align(Alignment.TopStart)
                             .background(
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                shape = RoundedCornerShape(bottomEnd = 12.dp)
                             )
-                            .padding(4.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Check-out Image
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(120.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                 ) {
                     AsyncImage(
                         parkingRecord.checkOutImage?.checkHttps(),
@@ -189,16 +221,16 @@ fun ParkingRecordItem(parkingRecord: ParkingRecord) {
                             .align(Alignment.TopStart)
                             .background(
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                shape = RoundedCornerShape(bottomEnd = 12.dp)
                             )
-                            .padding(4.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Times
             Row(
@@ -264,18 +296,16 @@ fun StatusBadge(status: String) {
         else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    Box(
-        modifier = Modifier
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.padding(vertical = 2.dp)
     ) {
         Text(
             text = status.replaceFirstChar { it.uppercase() },
             color = textColor,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
         )
     }
 }
@@ -290,38 +320,9 @@ fun LoadingItem(
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-fun ErrorItem(
-    message: String,
-    onRetryClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
+        CircularProgressIndicator(
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 2.dp
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = onRetryClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text("Retry")
-        }
     }
 }

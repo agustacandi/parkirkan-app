@@ -1,11 +1,13 @@
 package dev.agustacandi.parkirkanapp.di
 
+import android.content.Context
 import com.google.firebase.BuildConfig
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.agustacandi.parkirkanapp.data.auth.AuthRepositoryImpl
 import dev.agustacandi.parkirkanapp.data.auth.network.AuthService
@@ -20,6 +22,7 @@ import dev.agustacandi.parkirkanapp.domain.broadcast.BroadcastRepository
 import dev.agustacandi.parkirkanapp.domain.parking.repository.ParkingRepository
 import dev.agustacandi.parkirkanapp.domain.vehicle.VehicleRepository
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
+import dev.agustacandi.parkirkanapp.util.PreferenceManager
 import dev.agustacandi.parkirkanapp.util.UserPreferences
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -30,6 +33,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 class AppModule {
+
+    // Preference Manager
+    @Provides
+    @Singleton
+    fun providePreferenceManager(
+        @ApplicationContext context: Context
+    ): PreferenceManager =
+        PreferenceManager(context)
 
     // FCM
     @Provides
@@ -49,7 +60,7 @@ class AppModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://om-it-violin-stewart.trycloudflare.com/api/")
+            .baseUrl("https://nickname-achievement-jackson-shopper.trycloudflare.com/api/")
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .client(okHttpClient)
             .build()

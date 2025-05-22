@@ -61,27 +61,27 @@ fun AddBroadcastScreen(
         )
     }
 
-    // Minta izin kamera
+    // Request camera permission
     RequestCameraPermission { isGranted ->
         cameraPermissionGranted = isGranted
     }
 
-    // Efek untuk menangani state
+    // Effect to handle state
     LaunchedEffect(addBroadcastState) {
         when (addBroadcastState) {
             is AddBroadcastState.Success -> {
-                Toast.makeText(context, "Broadcast berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Broadcast successfully added", Toast.LENGTH_SHORT).show()
                 onBroadcastAdded()
             }
             is AddBroadcastState.Error -> {
                 val errorMessage = (addBroadcastState as AddBroadcastState.Error).message
                 Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             }
-            else -> {} // Tidak ada aksi khusus untuk state lain
+            else -> {} // No special action for other states
         }
     }
 
-    // Image picker dari galeri
+    // Image picker from gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -94,7 +94,7 @@ fun AddBroadcastScreen(
         if (success) {
             selectedImageUri = photoUri
         } else {
-            Toast.makeText(context, "Gagal mengambil foto", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -111,7 +111,7 @@ fun AddBroadcastScreen(
                     selectedImageUri = null
                     cameraLauncher.launch(photoUri)
                 } else {
-                    Toast.makeText(context, "Izin kamera dibutuhkan untuk fitur ini", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Camera permission is required for this feature", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -128,9 +128,7 @@ fun AddBroadcastScreen(
         errorMessage = (addBroadcastState as? AddBroadcastState.Error)?.message,
         onNavigateBack = onNavigateBack,
         onSaveClick = {
-            val file = selectedImageUri?.let { uri ->
-                uri.compressAndCreateImageFile(context)
-            }
+            val file = selectedImageUri?.compressAndCreateImageFile(context)
             viewModel.addBroadcast(title, description, file)
         }
     )
@@ -153,7 +151,7 @@ private fun AddBroadcastContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tambah Broadcast") },
+                title = { Text("Add Broadcast") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -209,19 +207,19 @@ private fun AddBroadcastContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Pilih Gambar (Opsional)",
+                            text = "Select Image (Optional)",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            // Judul Broadcast
+            // Title
             OutlinedTextField(
                 value = title,
                 onValueChange = onTitleChange,
-                label = { Text("Judul Broadcast") },
-                placeholder = { Text("Contoh: Parkir Tutup Sementara") },
+                label = { Text("Broadcast Title") },
+                placeholder = { Text("Example: Temporary Parking Closure") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -230,12 +228,12 @@ private fun AddBroadcastContent(
                 singleLine = true
             )
 
-            // Deskripsi
+            // Description
             OutlinedTextField(
                 value = description,
                 onValueChange = onDescriptionChange,
-                label = { Text("Deskripsi") },
-                placeholder = { Text("Contoh: Informasi mengenai penutupan area parkir sementara...") },
+                label = { Text("Description") },
+                placeholder = { Text("Example: Information about temporary parking area closure...") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp),
@@ -263,7 +261,7 @@ private fun AddBroadcastContent(
                         strokeWidth = 2.dp
                     )
                 }
-                Text("Simpan")
+                Text("Save")
             }
 
             // Error message
@@ -286,8 +284,8 @@ fun ImageSourceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pilih Sumber Gambar") },
-        text = { Text("Silahkan pilih sumber gambar yang ingin digunakan") },
+        title = { Text("Select Image Source") },
+        text = { Text("Please select the image source you want to use") },
         confirmButton = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -302,7 +300,7 @@ fun ImageSourceDialog(
                         contentDescription = "Gallery",
                         modifier = Modifier.size(18.dp).padding(end = 4.dp)
                     )
-                    Text("Galeri")
+                    Text("Gallery")
                 }
 
                 Button(
@@ -314,13 +312,13 @@ fun ImageSourceDialog(
                         contentDescription = "Camera",
                         modifier = Modifier.size(18.dp).padding(end = 4.dp)
                     )
-                    Text("Kamera")
+                    Text("Camera")
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal")
+                Text("Cancel")
             }
         }
     )

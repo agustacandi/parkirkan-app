@@ -36,22 +36,20 @@ import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePassword
 import dev.agustacandi.parkirkanapp.presentation.security.SecurityMainScreen
 import dev.agustacandi.parkirkanapp.presentation.security.broadcast.add.AddBroadcastScreen
 import dev.agustacandi.parkirkanapp.presentation.security.broadcast.edit.EditBroadcastScreen
-import dev.agustacandi.parkirkanapp.presentation.settings.BatteryOptimizationDialog
-import dev.agustacandi.parkirkanapp.presentation.settings.MiuiSettingsDialog
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
-import dev.agustacandi.parkirkanapp.util.BatteryOptimizationChecker
 import dev.agustacandi.parkirkanapp.util.FCMTokenManager
-import dev.agustacandi.parkirkanapp.util.MiuiHelper
-import dev.agustacandi.parkirkanapp.util.RequestNotificationPermission
-import kotlinx.coroutines.delay
+import dev.agustacandi.parkirkanapp.util.PreferenceManager
+import dev.agustacandi.parkirkanapp.presentation.notification.NotificationPermissionScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "MainActivity"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -60,156 +58,116 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var fcmTokenManager: FCMTokenManager
 
+    @Inject
+    lateinit var preferenceManager: PreferenceManager
+
     private val _navigationEvent = MutableStateFlow<String?>(null)
     private val navigationEvent: StateFlow<String?> = _navigationEvent.asStateFlow()
-
-    // Add state for battery dialog
-    private val _showBatteryDialog = MutableStateFlow(false)
-    private val showBatteryDialog: StateFlow<Boolean> = _showBatteryDialog.asStateFlow()
-
-    private val _showMiuiDialog = MutableStateFlow(false)
-    private val showMiuiDialog: StateFlow<Boolean> = _showMiuiDialog.asStateFlow()
-
-    private fun checkDeviceSettings() {
-        // Check MIUI device
-        if (MiuiHelper.isMiuiDevice()) {
-            // Show dialog after a delay to avoid blocking app start
-            lifecycleScope.launch {
-                delay(1000)
-                _showMiuiDialog.value = true
-            }
-        } else if (!BatteryOptimizationChecker.isIgnoringBatteryOptimizations(this)) {
-            // Regular battery optimization dialog for non-MIUI devices
-            lifecycleScope.launch {
-                delay(1000)
-                _showBatteryDialog.value = true
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Cek status login sebelumnya
-        authViewModel.checkLoginStatus()
-
-        // Setup FCM
-        setupFCM()
-
-        handleNotificationIntent(intent)
-
-        checkDeviceSettings()
-
-        // Check battery optimization status
-        checkBatteryOptimization()
-
+        
+        // Check for deep link first
+        val isAlertDeepLink = intent?.data?.toString()?.startsWith("parkirkanapp://alert") ?: false
+        if (isAlertDeepLink) {
+            Log.d(TAG, "Alert deep link detected in onCreate")
+            lifecycleScope.launch {
+                _navigationEvent.value = NavDestination.Alert.route
+            }
+        }
+        
+        initApp()
+        
         setContent {
             ParkirkanAppTheme {
-                RequestNotificationPermission()
-
                 val navController = rememberNavController()
                 val loginState by authViewModel.loginState.collectAsState()
-                // Collect navigation events from intents
                 val navEvent by navigationEvent.collectAsState()
-                val shouldShowBatteryDialog by showBatteryDialog.collectAsState()
-                val shouldShowMiuiDialog by showMiuiDialog.collectAsState()
 
-                if (shouldShowMiuiDialog) {
-                    MiuiSettingsDialog(
-                        onDismiss = { _showMiuiDialog.value = false }
-                    )
-                }
-
-
-                // Show battery optimization dialog if needed
-                if (shouldShowBatteryDialog) {
-                    BatteryOptimizationDialog(
-                        onDismiss = { _showBatteryDialog.value = false }
-                    )
-                }
-
-                // Handle navigation events
+                // Handle navigation events with high priority
                 LaunchedEffect(navEvent) {
                     navEvent?.let { destination ->
-                        Log.d("MainActivity", "Navigating to: $destination")
-                        // Wait for login state to be determined before navigating
-                        delay(300) // Small delay to ensure login state is processed
-                        // Navigate to the destination
-                        navController.navigate(destination) {
-                            // Clear back stack when navigating to Alert screen
+                        Log.d(TAG, "Navigation event detected, navigating to: $destination")
+                        try {
                             if (destination == NavDestination.Alert.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    inclusive = false
+                                Log.d(TAG, "Starting navigation to Alert screen...")
+                                
+                                // First make sure NavController is ready
+                                if (navController.graph.findNode(NavDestination.Alert.route) != null) {
+                                    // Force navigation to Alert with extreme priority
+                                    navController.navigate(destination) {
+                                        // Pop entire back stack to make sure this screen shows
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
+                                    Log.d(TAG, "Navigation to Alert completed successfully")
+                                } else {
+                                    Log.e(TAG, "Alert route not found in nav graph")
                                 }
+                            } else {
+                                // Normal navigation for other destinations
+                                navController.navigate(destination)
                             }
+                            
+                            // Clear the event after navigation attempt
+                            _navigationEvent.value = null
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error during navigation", e)
                         }
-
-                        // Reset the navigation event
-                        _navigationEvent.value = null
                     }
                 }
 
                 LaunchedEffect(loginState) {
-                    when (loginState) {
-                        is LoginState.Login -> {
-                            navController.navigate(NavDestination.Login.route) {
-                                popUpTo(NavDestination.Splash.route) { inclusive = true }
-                            }
-                        }
-
-                        is LoginState.AlreadyLoggedIn -> {
-                            // Check user role to determine where to navigate
-                            val userRole = (loginState as LoginState.AlreadyLoggedIn).userRole
-
-                            if (userRole == "security") {
-                                FirebaseMessaging.getInstance().subscribeToTopic("alert")
-                                navController.navigate(NavDestination.SecurityNav.Home.route) {
-                                    popUpTo(NavDestination.Login.route) { inclusive = true }
-                                }
-                            } else {
-                                // Default for "user" role
-                                navController.navigate(NavDestination.Main.route) {
-                                    popUpTo(NavDestination.Login.route) { inclusive = true }
-                                }
-                            }
-                        }
-
-                        is LoginState.Error -> {
-                            // Handle error state
-                        }
-
-                        else -> {}
-                    }
+                    Log.d(TAG, "MainActivity observed LoginState change: ${loginState::class.simpleName}")
+                    handleLoginState(loginState, navController)
                 }
 
                 ParkingAppNavHost(
                     navController = navController,
                     modifier = Modifier.fillMaxSize(),
+                    preferenceManager = preferenceManager,
+                    authViewModel = authViewModel
                 )
             }
         }
     }
+    
+    private fun initApp() {
+        authViewModel.checkLoginStatus()
+        setupFCM()
+        handleNotificationIntent(intent)
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Save the new intent
         setIntent(intent)
+        
+        // Check for deep link first - high priority
+        val isAlertDeepLink = intent.data?.toString()?.startsWith("parkirkanapp://alert") ?: false
+        if (isAlertDeepLink) {
+            Log.d(TAG, "Alert deep link detected in onNewIntent")
+            lifecycleScope.launch {
+                _navigationEvent.value = NavDestination.Alert.route
+            }
+            return
+        }
+        
+        // Then process as normal notification
         handleNotificationIntent(intent)
     }
 
     private fun setupFCM() {
-        // Subscribe ke topik umum jika diperlukan
         FirebaseMessaging.getInstance().subscribeToTopic("broadcast")
 
-        // Log token FCM saat ini untuk debugging
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 fcmTokenManager.getFCMToken().collectLatest { result ->
-                    if (result.isSuccess) {
-                        Log.d("FCM", "Current FCM Token: ${result.getOrNull()}")
-                    } else {
-                        Log.e("FCM", "Failed to get FCM token", result.exceptionOrNull())
+                    result.onSuccess { token ->
+                        Log.d(TAG, "Current FCM Token: $token")
+                    }.onFailure { error ->
+                        Log.e(TAG, "Failed to get FCM token", error)
                     }
                 }
             }
@@ -217,51 +175,128 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleNotificationIntent(intent: Intent?) {
-        intent?.let {
-            Log.d("MainActivity", "Intent received: action=${it.action}, extras=${it.extras}")
-
-            // Check if this is from a notification
-            if (it.getBooleanExtra("notification_opened", false)) {
-                // Get notification type and target route
-                val notificationType = it.getStringExtra("notification_type")
-                val targetRoute = it.getStringExtra("target_route")
-                val timestamp = it.getLongExtra("timestamp", 0)
-
-                Log.d(
-                    "MainActivity",
-                    "Notification: type=$notificationType, route=$targetRoute, time=$timestamp"
-                )
-
-                // Handle alert notifications
-                if (notificationType == "alert" || targetRoute == NavDestination.Alert.route) {
-                    // Set navigation event with a small delay to ensure app is ready
-                    lifecycleScope.launch {
-                        delay(100)
+        Log.d(TAG, "handleNotificationIntent called with action: ${intent?.action}")
+        Log.d(TAG, "Intent extras: ${intent?.extras?.keySet()?.joinToString()}")
+        
+        intent?.takeIf { it.getBooleanExtra("notification_opened", false) }?.let {
+            val notificationType = it.getStringExtra("notification_type")
+            val targetRoute = it.getStringExtra("target_route")
+            val forceNavigation = it.getBooleanExtra("force_navigation", false)
+            
+            Log.d(TAG, "Notification intent detected: type=$notificationType, route=$targetRoute, force=$forceNavigation")
+            
+            if (notificationType == "alert" || targetRoute == NavDestination.Alert.route) {
+                Log.d(TAG, "Processing alert notification intent, navigating to Alert screen")
+                
+                // Direct navigation using lifecycleScope for immediate effect
+                lifecycleScope.launch {
+                    try {
+                        // Force navigation to Alert screen with high priority
                         _navigationEvent.value = NavDestination.Alert.route
-                        Log.d("MainActivity", "Navigation set to Alert")
+                        Log.d(TAG, "Navigation event set to: ${_navigationEvent.value}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error setting navigation event", e)
                     }
                 }
             }
         }
     }
-
-    private fun checkBatteryOptimization() {
-        if (!BatteryOptimizationChecker.isIgnoringBatteryOptimizations(this)) {
-            // App is under battery optimization - show dialog after a delay to avoid blocking app start
-            lifecycleScope.launch {
-                delay(1000) // Show dialog after a short delay
-                _showBatteryDialog.value = true
+    
+    private fun handleLoginState(loginState: LoginState, navController: NavHostController) {
+        Log.d(TAG, "handleLoginState called with state: ${loginState::class.simpleName}")
+        
+        when (loginState) {
+            is LoginState.Login -> {
+                Log.d(TAG, "Navigating to login flow")
+                navigateToLoginFlow(navController)
             }
+            is LoginState.AlreadyLoggedIn -> {
+                Log.d(TAG, "User already logged in with role: ${loginState.userRole}")
+                navigateToMainFlow(loginState.userRole, navController)
+            }
+            is LoginState.Success -> {
+                Log.d(TAG, "Login success with role: ${loginState.userRole}")
+                navigateToMainFlow(loginState.userRole, navController)
+            }
+            is LoginState.Error -> {
+                Log.e(TAG, "Login error: ${loginState.message}")
+                // Stay on login screen and show error
+                if (navController.currentDestination?.route != NavDestination.Login.route) {
+                    navigateToLoginFlow(navController)
+                }
+            }
+            is LoginState.Loading -> {
+                Log.d(TAG, "Login in progress, staying on current screen")
+            }
+            else -> {
+                Log.d(TAG, "Unhandled login state: ${loginState::class.simpleName}")
+            }
+        }
+    }
+    
+    private fun navigateToMainFlow(userRole: String, navController: NavHostController) {
+        val destination = if (userRole == "security") {
+            Log.d(TAG, "Navigating to security screen for security role")
+            // Unsubscribe from alert topic first to ensure clean state
+            FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
+            // Then subscribe to alert topic
+            FirebaseMessaging.getInstance().subscribeToTopic("alert")
+            NavDestination.SecurityNav.Home.route
+        } else {
+            Log.d(TAG, "Navigating to main screen for user role")
+            // Ensure user is unsubscribed from alert topic
+            FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
+            NavDestination.Main.route
+        }
+        
+        Log.d(TAG, "Final destination: $destination")
+        navController.navigate(destination) {
+            popUpTo(NavDestination.Login.route) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
+    private fun navigateToLoginFlow(navController: NavHostController) {
+        val destination = if (!preferenceManager.isNotificationPermissionRequested()) {
+            Log.d(TAG, "Navigating to notification permission screen")
+            NavDestination.NotificationPermission.route
+        } else {
+            Log.d(TAG, "Navigating to login screen")
+            NavDestination.Login.route
+        }
+        
+        navController.navigate(destination) {
+            popUpTo(NavDestination.Splash.route) { inclusive = true }
+            launchSingleTop = true
         }
     }
 }
 
-// 1. Definisi NavDestination
+// Navigation destinations
 sealed class NavDestination(val route: String) {
     // Main destinations
     data object Splash : NavDestination("splash")
+    data object NotificationPermission : NavDestination("notification_permission")
     data object Login : NavDestination("login")
     data object Main : NavDestination("main")
+    data object Alert : NavDestination("alert")
+    data object Broadcast : NavDestination("broadcast")
+    data object ChangePassword : NavDestination("change_password")
+    data object About : NavDestination("about")
+    
+    // Vehicle related destinations
+    data object AddVehicle : NavDestination("add_vehicle")
+    data object EditVehicle : NavDestination("edit_vehicle/{vehicleId}") {
+        fun createRoute(vehicleId: String) = "edit_vehicle/$vehicleId"
+        const val ARG_VEHICLE_ID = "vehicleId"
+    }
+
+    // Broadcast related destinations
+    data object AddBroadcast : NavDestination("add_broadcast")
+    data object EditBroadcast : NavDestination("edit_broadcast/{broadcastId}") {
+        fun createRoute(broadcastId: String) = "edit_broadcast/$broadcastId"
+        const val ARG_BROADCAST_ID = "broadcastId"
+    }
 
     // Nested destinations
     sealed class BottomNav(route: String) : NavDestination(route) {
@@ -276,38 +311,16 @@ sealed class NavDestination(val route: String) {
         data object Broadcast : SecurityNav("security_broadcast")
         data object Profile : SecurityNav("security_profile")
     }
-
-    data object AddBroadcast : NavDestination("add_broadcast")
-
-    data object EditBroadcast : NavDestination("edit_broadcast/{broadcastId}") {
-        fun createRoute(broadcastId: String) = "edit_broadcast/$broadcastId"
-        const val ARG_BROADCAST_ID = "broadcastId"
-    }
-
-    // Sub-destinations
-    data object Broadcast : NavDestination("broadcast")
-
-    data object Alert : NavDestination("alert")
-
-    data object AddVehicle : NavDestination("add_vehicle")
-
-    data object EditVehicle : NavDestination("edit_vehicle/{vehicleId}") {
-        fun createRoute(vehicleId: String) = "edit_vehicle/$vehicleId"
-        const val ARG_VEHICLE_ID = "vehicleId"
-    }
-
-    data object ChangePassword : NavDestination("change_password")
-    data object About : NavDestination("about")
 }
 
-// 2. Navigation setup
+// Navigation setup
 @Composable
 fun ParkingAppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    preferenceManager: PreferenceManager,
+    authViewModel: AuthViewModel
 ) {
-
-
     NavHost(
         navController = navController,
         startDestination = NavDestination.Splash.route,
@@ -317,16 +330,27 @@ fun ParkingAppNavHost(
         composable(NavDestination.Splash.route) {
             SplashScreen()
         }
+        
+        // Notification Permission Screen
+        composable(NavDestination.NotificationPermission.route) {
+            NotificationPermissionScreen(
+                onContinue = { _ ->
+                    preferenceManager.setNotificationPermissionRequested(true)
+                    navController.navigate(NavDestination.Login.route) {
+                        popUpTo(NavDestination.Splash.route) { inclusive = true }
+                    }
+                },
+                preferenceManager = preferenceManager
+            )
+        }
 
         // Alert Screen
         composable(NavDestination.Alert.route) {
             AlertScreen(
                 onConfirmClick = {
-                    // Handle confirmation - navigate back to main
                     navController.popBackStack(NavDestination.Main.route, false)
                 },
                 onRejectClick = {
-                    // Handle rejection - just go back
                     navController.popBackStack()
                 }
             )
@@ -334,46 +358,35 @@ fun ParkingAppNavHost(
 
         // Login Screen
         composable(NavDestination.Login.route) {
-            AuthScreen(
-                onLoginSuccess = {
-                    navController.navigate(NavDestination.Main.route) {
-                        popUpTo(NavDestination.Login.route) { inclusive = true }
-                    }
-                }
-            )
+            AuthScreen(viewModel = authViewModel)
         }
 
-        // Main Screen dengan Bottom Navigation
+        // Main Screen with Bottom Navigation
         composable(NavDestination.Main.route) {
-            val authViewModel: AuthViewModel = hiltViewModel()
             val loginState by authViewModel.loginState.collectAsState()
-
-            // Get user role from login state
+            
+            // Ambil userRole dari LoginState yang ada
             val userRole = when (loginState) {
                 is LoginState.AlreadyLoggedIn -> (loginState as LoginState.AlreadyLoggedIn).userRole
-                else -> "user" // Default role
+                is LoginState.Success -> (loginState as LoginState.Success).userRole
+                else -> "user"
             }
-
-            RoleBasedMainScreen(role = userRole, navController = navController)
+            
+            Log.d(TAG, "Main route composable - User role: $userRole")
+            
+            RoleBasedMainScreen(role = userRole, navController = navController, authViewModel = authViewModel)
         }
 
+        // Security Main Screen
         composable(NavDestination.SecurityNav.Home.route) {
-            SecurityMainScreen(navController)
+            SecurityMainScreen(navController, authViewModel)
         }
 
-        // Broadcast Screen
-        composable(NavDestination.Broadcast.route) {
-//            BroadcastScreen(
-//                onNavigateBack = { navController.navigateUp() }
-//            )
-        }
-
-        // Add Vehicle Screen
+        // Vehicle Screens
         composable(NavDestination.AddVehicle.route) {
             AddVehicleScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onVehicleAdded = {
-                    // Kembali ke halaman Vehicle dengan refresh data
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("refresh_vehicles", true)
@@ -382,7 +395,6 @@ fun ParkingAppNavHost(
             )
         }
 
-        // Edit Vehicle Screen dengan parameter
         composable(
             route = NavDestination.EditVehicle.route,
             arguments = listOf(
@@ -390,57 +402,32 @@ fun ParkingAppNavHost(
                     type = NavType.StringType
                 }
             )
-        ) { _ ->
+        ) {
             EditVehicleScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onVehicleUpdated = {
-                    // Set refresh flag and navigate back
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("refresh_vehicles", true)
-                    navController.navigateUp()
-                },
-                onVehicleDeleted = {
-                    // Set refresh flag and navigate back
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("refresh_vehicles", true)
-                    navController.navigateUp()
-                }
+                onVehicleUpdated = { setRefreshAndNavigateUp(navController, "refresh_vehicles") },
+                onVehicleDeleted = { setRefreshAndNavigateUp(navController, "refresh_vehicles") }
             )
         }
 
-        // Change Password Screen
+        // Profile related screens
         composable(NavDestination.ChangePassword.route) {
             ChangePasswordScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
 
-        // About Screen
         composable(NavDestination.About.route) {
             AboutScreen(
                 onNavigateBack = { navController.navigateUp() }
             )
         }
 
-        // Add this to MainActivity.kt in the ParkingAppNavHost function
-
-// Inside NavHost composable, add these routes
-        composable(NavDestination.SecurityNav.Home.route) {
-            SecurityMainScreen(navController)
-        }
-
+        // Broadcast related screens
         composable(NavDestination.AddBroadcast.route) {
             AddBroadcastScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onBroadcastAdded = {
-                    // Trigger refresh on returning to broadcast list
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("refresh_broadcasts", true)
-                    navController.navigateUp()
-                }
+                onBroadcastAdded = { setRefreshAndNavigateUp(navController, "refresh_broadcasts") }
             )
         }
 
@@ -451,35 +438,32 @@ fun ParkingAppNavHost(
                     type = NavType.StringType
                 }
             )
-        ) { _ ->
+        ) {
             EditBroadcastScreen(
                 onNavigateBack = { navController.navigateUp() },
-                onBroadcastUpdated = {
-                    // Trigger refresh on returning to broadcast list
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("refresh_broadcasts", true)
-                    navController.navigateUp()
-                },
-                onBroadcastDeleted = {
-                    // Trigger refresh on returning to broadcast list
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("refresh_broadcasts", true)
-                    navController.navigateUp()
-                }
+                onBroadcastUpdated = { setRefreshAndNavigateUp(navController, "refresh_broadcasts") },
+                onBroadcastDeleted = { setRefreshAndNavigateUp(navController, "refresh_broadcasts") }
             )
         }
     }
 }
 
+private fun setRefreshAndNavigateUp(navController: NavHostController, refreshKey: String) {
+    navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.set(refreshKey, true)
+    navController.navigateUp()
+}
+
 @Composable
 fun RoleBasedMainScreen(
     role: String,
-    navController: NavHostController
+    navController: NavHostController,
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
+    Log.d("RoleBasedMainScreen", "Current user role: $role")
     when (role) {
-        "security" -> SecurityMainScreen(navController)
+        "security" -> SecurityMainScreen(navController, authViewModel)
         else -> MainScreen(navController) // Default for "user" role
     }
 }

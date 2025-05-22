@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.google.firebase.messaging.FirebaseMessaging
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -33,32 +34,44 @@ class AuthViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun login(email: String, password: String) {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "Starting login process")
             _loginState.value = LoginState.Loading
 
             fcmTokenManager.getFCMToken()
                 .catch { e ->
+                    Log.e("AuthViewModel", "Failed to get FCM token", e)
                     _loginState.value = LoginState.Error("Failed to get FCM token: ${e.message}")
                 }
                 .flatMapLatest { tokenResult ->
                     if (tokenResult.isFailure) {
+                        Log.e("AuthViewModel", "FCM token result failed")
                         _loginState.value = LoginState.Error("Failed to get FCM token")
                         throw tokenResult.exceptionOrNull() ?: Exception("Unknown error")
                     }
 
                     // Token berhasil didapat, lanjutkan dengan login
                     val fcmToken = tokenResult.getOrThrow()
+                    Log.d("AuthViewModel", "Got FCM token, proceeding with login")
                     authRepository.login(email, password, fcmToken)
                 }
                 .onEach { result ->
                     if (result.isSuccess) {
-                        _loginState.value = LoginState.Success
+                        // Ambil data user termasuk role
+                        val user = result.getOrNull()
+                        val userRole = user?.role ?: "user"
+                        Log.d("AuthViewModel", "Login successful with role: $userRole")
+                        // Set success state first
+                        _loginState.value = LoginState.Success(userRole)
                     } else {
+                        val error = result.exceptionOrNull()
+                        Log.e("AuthViewModel", "Login failed: ${error?.message}")
                         _loginState.value = LoginState.Error(
-                            result.exceptionOrNull()?.message ?: "Login failed"
+                            error?.message ?: "Login failed"
                         )
                     }
                 }
                 .catch { e ->
+                    Log.e("AuthViewModel", "Error in login flow", e)
                     _loginState.value = LoginState.Error(e.message ?: "Unknown error")
                 }
                 .launchIn(viewModelScope)
@@ -67,19 +80,35 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "Starting logout process")
             _logoutState.value = LogoutState.Loading
+
+            // Unsubscribe from all FCM topics
+            try {
+                Log.d("AuthViewModel", "Unsubscribing from FCM topics")
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("broadcast")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error unsubscribing from FCM topics", e)
+            }
 
             authRepository.logout()
                 .onEach { result ->
                     if (result.isSuccess) {
+                        Log.d("AuthViewModel", "Logout successful, updating state to Success")
                         _logoutState.value = LogoutState.Success
+                        // Reset login state after successful logout
+                        _loginState.value = LoginState.Login
                     } else {
+                        val error = result.exceptionOrNull()
+                        Log.e("AuthViewModel", "Logout failed: ${error?.message}")
                         _logoutState.value = LogoutState.Error(
-                            result.exceptionOrNull()?.message ?: "Logout failed"
+                            error?.message ?: "Logout failed"
                         )
                     }
                 }
                 .catch { e ->
+                    Log.e("AuthViewModel", "Error in logout flow", e)
                     _logoutState.value = LogoutState.Error(e.message ?: "Unknown error")
                 }
                 .launchIn(viewModelScope)
@@ -95,13 +124,17 @@ class AuthViewModel @Inject constructor(
                 if (isLoggedIn) {
                     // Get current user to check role
                     val user = authRepository.getCurrentUser().first()
+                    val userRole = user?.role ?: "user"
+                    Log.d("AuthViewModel", "User already logged in with role: $userRole")
                     // Set role in login state (default to "user" if role is null)
-                    _loginState.value = LoginState.AlreadyLoggedIn(user?.role ?: "user")
+                    _loginState.value = LoginState.AlreadyLoggedIn(userRole)
                 } else {
+                    Log.d("AuthViewModel", "User not logged in, navigating to login")
                     _loginState.value = LoginState.Login
                 }
             } catch (e: Exception) {
-                // Ignore error
+                Log.e("AuthViewModel", "Error checking login status", e)
+                _loginState.value = LoginState.Login
             }
         }
     }
@@ -111,7 +144,7 @@ sealed class LoginState {
     data object Idle : LoginState()
     data object Login: LoginState()
     data object Loading : LoginState()
-    data object Success : LoginState()
+    data class Success(val userRole: String) : LoginState()
     data class AlreadyLoggedIn(val userRole: String) : LoginState()
     data class Error(val message: String) : LoginState()
 }

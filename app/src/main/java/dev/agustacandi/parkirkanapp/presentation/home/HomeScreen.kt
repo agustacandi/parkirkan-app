@@ -1,5 +1,6 @@
 package dev.agustacandi.parkirkanapp.presentation.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,10 +34,10 @@ fun HomeScreen(
     appViewModel: AppViewModel = hiltViewModel(),
     onNavigateToBroadcast: () -> Unit
 ) {
-    // State untuk menampilkan atau menyembunyikan bottom sheet
+    // State for showing or hiding bottom sheet
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    // State untuk bottom sheet
+    // Bottom sheet state
     val bottomSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
@@ -58,8 +59,6 @@ fun HomeScreen(
         viewModel.fetchRecentBroadcasts()
     }
 
-    // Selected vehicle state
-
     // Check if selected vehicle is checked in when vehicle changes
     LaunchedEffect(selectedVehicle) {
         selectedVehicle?.let {
@@ -70,24 +69,32 @@ fun HomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Welcome Card with Check In/Out
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(20.dp)
                 ) {
                     Text(
-                        "Welcome to Parkirkan App",
+                        "Welcome",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -101,8 +108,15 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Card(
-                                modifier = Modifier.size(48.dp),
-                                shape = MaterialTheme.shapes.small
+                                modifier = Modifier.size(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                border = BorderStroke(
+                                    width = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
                             ) {
                                 SubcomposeAsyncImage(
                                     model = it.image.checkHttps(),
@@ -112,18 +126,21 @@ fun HomeScreen(
                                     loading = {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.dp
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = it.name,
-                                    style = MaterialTheme.typography.titleMedium
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 )
                                 Text(
                                     text = it.licensePlate,
@@ -132,7 +149,14 @@ fun HomeScreen(
                                 )
                             }
 
-                            IconButton(onClick = { appViewModel.setSelectedVehicle(null) }) {
+                            FilledIconButton(
+                                onClick = { appViewModel.setSelectedVehicle(null) },
+                                modifier = Modifier.size(40.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear selection"
@@ -152,7 +176,7 @@ fun HomeScreen(
                         } else {
                             // Prompt to select a vehicle
                             Text(
-                                "Please select a vehicle to proceed",
+                                "Please select a vehicle to continue",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 8.dp)
@@ -164,19 +188,27 @@ fun HomeScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Confirm Check Out button - only show if a vehicle is selected AND checked in
                         if (selectedVehicle != null && isCheckedInState is CheckedInState.CheckedIn) {
-                            Button(
+                            FilledTonalButton(
                                 onClick = {
                                     selectedVehicle?.let {
                                         viewModel.confirmCheckOut(it.licensePlate)
                                     }
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Confirm Check Out")
+                                Text(
+                                    "Confirm Exit",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
                             }
                         }
 
@@ -186,23 +218,39 @@ fun HomeScreen(
 
                             Button(
                                 onClick = { showBottomSheet = true },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Choose Vehicle")
+                                Text(
+                                    "Select Vehicle",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
                             }
                         } else if (vehicleListState is VehicleListState.Success) {
                             // No vehicles, show Add Vehicle button
                             Button(
                                 onClick = { /* TODO: Navigate to Add Vehicle */ },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Add,
-                                    contentDescription = "Add",
-                                    modifier = Modifier.size(18.dp)
+                                    contentDescription = "Add Vehicle",
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Add Vehicle")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Add Vehicle",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
                             }
                         }
                     }
@@ -210,49 +258,74 @@ fun HomeScreen(
                     // Status message based on check-in state
                     when (isCheckedInState) {
                         is CheckedInState.Loading -> {
+                            Spacer(modifier = Modifier.height(16.dp))
                             LinearProgressIndicator(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 16.dp)
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         }
                         is CheckedInState.Error -> {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = "Error",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = (isCheckedInState as CheckedInState.Error).message,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Error",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = (isCheckedInState as CheckedInState.Error).message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
                         is CheckedInState.CheckedIn -> {
-                            Text(
-                                "Your vehicle is currently checked in",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 16.dp)
-                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    "Your vehicle is currently parked",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                         }
                         is CheckedInState.NotCheckedIn -> {
                             if (selectedVehicle != null) {
-                                Text(
-                                    "Your vehicle is not checked in",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(top = 16.dp)
-                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        "Your vehicle is not currently parked",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
                             }
                         }
                         else -> { /* Nothing to show for Idle state */ }
@@ -329,31 +402,26 @@ fun HomeScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = bottomSheetState
+            sheetState = bottomSheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Select Vehicle",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
+                Text(
+                    text = "Select Vehicle",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold
                     )
-                    IconButton(onClick = { showBottomSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     items(vehicles) { vehicle ->
                         VehicleItem(
@@ -370,11 +438,6 @@ fun HomeScreen(
                             }
                         )
                     }
-
-                    // Add padding at the bottom
-                    item {
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
                 }
             }
         }
@@ -387,7 +450,11 @@ fun VehicleItem(vehicle: VehicleRecord, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 4.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -398,7 +465,11 @@ fun VehicleItem(vehicle: VehicleRecord, onClick: () -> Unit) {
             // Vehicle image
             Card(
                 modifier = Modifier.size(48.dp),
-                shape = MaterialTheme.shapes.small
+                shape = MaterialTheme.shapes.small,
+                border = BorderStroke(
+                    width = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
             ) {
                 SubcomposeAsyncImage(
                     model = vehicle.image.checkHttps(),
@@ -435,7 +506,13 @@ fun VehicleItem(vehicle: VehicleRecord, onClick: () -> Unit) {
 fun BroadcastItem(broadcast: Broadcast) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -448,7 +525,11 @@ fun BroadcastItem(broadcast: Broadcast) {
                 Card(
                     modifier = Modifier
                         .size(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(8.dp)),
+                    border = BorderStroke(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
                 ) {
                     SubcomposeAsyncImage(
                         model = imageUrl.checkHttps(),

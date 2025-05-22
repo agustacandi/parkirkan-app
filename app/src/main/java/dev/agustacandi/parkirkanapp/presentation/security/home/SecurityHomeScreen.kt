@@ -50,7 +50,7 @@ fun SecurityHomeScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        "Selamat datang, Petugas Keamanan",
+                        "Welcome, Security Officer",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -58,7 +58,7 @@ fun SecurityHomeScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        "Anda dapat melihat dan mengelola broadcast untuk menginformasikan pengguna tentang berita penting.",
+                        "You can view and manage broadcasts to inform users about important news.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -74,7 +74,7 @@ fun SecurityHomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "Broadcast Terbaru",
+                    "Latest Broadcasts",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -82,10 +82,10 @@ fun SecurityHomeScreen(
                 TextButton(
                     onClick = onNavigateToBroadcast
                 ) {
-                    Text("Lihat Semua")
+                    Text("See All")
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Lihat semua broadcast",
+                        contentDescription = "See all broadcasts",
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -204,7 +204,7 @@ fun EmptyBroadcasts() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            "Tidak ada broadcast tersedia",
+            "No broadcasts available",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -221,7 +221,7 @@ fun ErrorBroadcasts(message: String, onRetry: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Error memuat broadcast",
+            text = "Error loading broadcasts",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error
         )
@@ -237,7 +237,7 @@ fun ErrorBroadcasts(message: String, onRetry: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = onRetry) {
-            Text("Coba Lagi")
+            Text("Retry")
         }
     }
 }

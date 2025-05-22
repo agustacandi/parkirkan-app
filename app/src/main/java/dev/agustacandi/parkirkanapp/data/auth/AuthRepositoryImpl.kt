@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
@@ -57,15 +58,41 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun logout(): Flow<Result<Unit>> = flow {
         try {
+            Log.d("AuthRepositoryImpl", "Starting repository logout process")
+            
+            // Get current user ID and FCM token before clearing data
+            val userId = userPreferences.getUserId()
+            val currentToken = userPreferences.getFcmToken()
+            Log.d("AuthRepositoryImpl", "Current user ID: $userId, FCM token: $currentToken")
+            
+            // Remove FCM token from server if available
+            if (!currentToken.isNullOrEmpty() && userId.isNotEmpty()) {
+                try {
+                    Log.d("AuthRepositoryImpl", "Removing FCM token from server")
+                    authService.updateFcmToken(
+                        userId = userId,
+                        request = UpdateFcmTokenRequest(fcmToken = "")
+                    )
+                } catch (e: Exception) {
+                    Log.e("AuthRepositoryImpl", "Error removing FCM token", e)
+                }
+            }
+            
+            // Call logout API
+            Log.d("AuthRepositoryImpl", "Calling logout API")
             val response = authService.logout()
             if (response.isSuccessful) {
-                // Clear user data from preferences
+                Log.d("AuthRepositoryImpl", "Logout API call successful")
+                // Clear user data from preferences after successful API call
+                Log.d("AuthRepositoryImpl", "Clearing user data from preferences")
                 userPreferences.clearUserData()
                 emit(Result.success(Unit))
             } else {
+                Log.e("AuthRepositoryImpl", "Logout API call failed: ${response.message()}")
                 emit(Result.failure(Exception("Logout failed: ${response.message()}")))
             }
         } catch (e: Exception) {
+            Log.e("AuthRepositoryImpl", "Error in logout flow", e)
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -77,23 +104,41 @@ class AuthRepositoryImpl @Inject constructor(
     override fun updateFcmToken(fcmToken: String): Flow<Result<Unit>> = flow {
         try {
             val userId = userPreferences.getUserId()
-
             if (userId.isEmpty()) {
+                Log.e("AuthRepositoryImpl", "Cannot update FCM token: User not logged in")
                 emit(Result.failure(Exception("User not logged in")))
                 return@flow
             }
 
+            Log.d("AuthRepositoryImpl", "Updating FCM token for user $userId")
             val response = authService.updateFcmToken(
                 userId = userId,
                 request = UpdateFcmTokenRequest(fcmToken = fcmToken)
             )
 
             if (response.isSuccessful) {
+                Log.d("AuthRepositoryImpl", "FCM token updated successfully")
+                userPreferences.saveFcmToken(fcmToken)
                 emit(Result.success(Unit))
             } else {
-                emit(Result.failure(Exception("Failed to update FCM token: ${response.message()}")))
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = if (errorBody != null) {
+                    try {
+                        val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+                        val adapter = moshi.adapter(ErrorResponse::class.java)
+                        val errorResponse = adapter.fromJson(errorBody)
+                        errorResponse?.data?.error ?: errorResponse?.message ?: "Unknown error"
+                    } catch (e: Exception) {
+                        "Failed to parse error response: ${response.message()}"
+                    }
+                } else {
+                    "Failed to update FCM token: ${response.message()}"
+                }
+                Log.e("AuthRepositoryImpl", errorMessage)
+                emit(Result.failure(Exception(errorMessage)))
             }
         } catch (e: Exception) {
+            Log.e("AuthRepositoryImpl", "Error updating FCM token", e)
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)

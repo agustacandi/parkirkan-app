@@ -41,6 +41,7 @@ class UserPreferences @Inject constructor(
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER = "user"
         private const val KEY_SELECTED_VEHICLE_ID = "selected_vehicle_id"
+        private const val KEY_FCM_TOKEN = "fcm_token"
     }
 
     fun saveAuthToken(token: String) {
@@ -75,8 +76,20 @@ class UserPreferences @Inject constructor(
         return getUser()?.id.toString()
     }
 
+    fun saveFcmToken(token: String) {
+        prefs.edit {
+            putString(KEY_FCM_TOKEN, token)
+        }
+    }
+
+    fun getFcmToken(): String? {
+        return prefs.getString(KEY_FCM_TOKEN, null)
+    }
+
     fun clearUserData() {
-        prefs.edit { clear() }
+        prefs.edit {
+            clear()
+        }
         _userFlow.value = null
         _isLoggedInFlow.value = false
     }

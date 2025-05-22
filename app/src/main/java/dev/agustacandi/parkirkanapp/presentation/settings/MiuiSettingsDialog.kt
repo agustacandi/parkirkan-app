@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -19,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -36,8 +40,9 @@ fun MiuiSettingsDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -45,8 +50,10 @@ fun MiuiSettingsDialog(
             ) {
                 Text(
                     text = "Xiaomi/MIUI Device Detected",
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -55,7 +62,7 @@ fun MiuiSettingsDialog(
                     painter = painterResource(id = R.drawable.alert_illustration),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(120.dp)
                         .padding(8.dp)
                 )
 
@@ -63,8 +70,9 @@ fun MiuiSettingsDialog(
 
                 Text(
                     text = "MIUI devices require additional settings to ensure notifications work properly. Please enable these settings:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -73,29 +81,43 @@ fun MiuiSettingsDialog(
                     onClick = {
                         MiuiHelper.openMiuiBatterySettings(context)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("1. Enable Autostart")
+                    Text(
+                        text = "1. Enable Autostart",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Button(
+                FilledTonalButton(
                     onClick = {
                         MiuiHelper.openMiuiNotificationSettings(context)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("2. Configure Notifications")
+                    Text(
+                        text = "2. Configure Notifications",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(
+                OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("I'll Do This Later")
+                    Text(
+                        text = "I'll Do This Later",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }

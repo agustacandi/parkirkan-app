@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -26,8 +27,9 @@ fun BatteryOptimizationDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -35,8 +37,10 @@ fun BatteryOptimizationDialog(
             ) {
                 Text(
                     text = "Enable Reliable Notifications",
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -45,7 +49,7 @@ fun BatteryOptimizationDialog(
                     painter = painterResource(id = R.drawable.alert_illustration),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(120.dp)
                         .padding(8.dp)
                 )
 
@@ -53,8 +57,9 @@ fun BatteryOptimizationDialog(
 
                 Text(
                     text = "For reliable notifications with custom sounds and vibrations, you need to disable battery optimization for this app.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -71,14 +76,19 @@ fun BatteryOptimizationDialog(
                             context.startActivity(fallbackIntent)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Battery Settings")
+                    Text(
+                        text = "Battery Settings",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Button(
+                FilledTonalButton(
                     onClick = {
                         try {
                             context.startActivity(
@@ -90,18 +100,27 @@ fun BatteryOptimizationDialog(
                             context.startActivity(fallbackIntent)
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Notification Settings")
+                    Text(
+                        text = "Notification Settings",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(
+                OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Later")
+                    Text(
+                        text = "Later",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }

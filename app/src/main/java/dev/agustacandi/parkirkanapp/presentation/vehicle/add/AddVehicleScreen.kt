@@ -23,10 +23,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,7 +54,7 @@ fun AddVehicleScreen(
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var cameraPermissionGranted by remember { mutableStateOf(false) }
 
-    // File untuk menyimpan foto kamera
+    // File to store camera photo
     val photoFile = remember { File(context.cacheDir, "temp_photo_${System.currentTimeMillis()}.jpg") }
     val photoUri = remember {
         FileProvider.getUriForFile(
@@ -61,22 +64,22 @@ fun AddVehicleScreen(
         )
     }
 
-    // Minta izin kamera
+    // Request camera permission
     RequestCameraPermission { isGranted ->
         cameraPermissionGranted = isGranted
     }
 
-    // Efek untuk menangani state
+    // Effect to handle state
     LaunchedEffect(addVehicleState) {
         when (addVehicleState) {
             is AddVehicleState.Success -> {
                 onVehicleAdded()
             }
-            else -> {} // Tidak ada aksi khusus untuk state lain
+            else -> {} // No special action for other states
         }
     }
 
-    // Image picker dari galeri
+    // Image picker from gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -89,7 +92,7 @@ fun AddVehicleScreen(
         if (success) {
             selectedImageUri = photoUri
         } else {
-            Toast.makeText(context, "Gagal mengambil foto", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -103,18 +106,17 @@ fun AddVehicleScreen(
             onCameraSelected = {
                 showImageSourceDialog = false
                 if (cameraPermissionGranted) {
-                    // Set URI ke null terlebih dahulu untuk memicu recomposition
+                    // Set URI to null first to trigger recomposition
                     selectedImageUri = null
                     cameraLauncher.launch(photoUri)
                 } else {
-                    // Tampilkan toast atau dialog bahwa izin kamera diperlukan
-                    Toast.makeText(context, "Izin kamera diperlukan untuk menggunakan fitur ini", Toast.LENGTH_SHORT).show()
+                    // Show toast or dialog that camera permission is required
+                    Toast.makeText(context, "Camera permission is required to use this feature", Toast.LENGTH_SHORT).show()
                 }
             }
         )
     }
 
-    // Content lainnya sama seperti sebelumnya
     AddVehicleContent(
         name = name,
         onNameChange = { name = it },
@@ -127,13 +129,13 @@ fun AddVehicleScreen(
         onNavigateBack = onNavigateBack,
         onSaveClick = {
             selectedImageUri?.let { uri ->
-                // Konversi Uri ke File dengan kompresi
+                // Convert Uri to File with compression
                 val file = uri.compressAndCreateImageFile(context)
                 file?.let {
                     viewModel.addVehicle(name, licensePlate, it)
                 } ?: run {
-                    // Tampilkan pesan error jika kompresi gagal
-                    Toast.makeText(context, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
+                    // Show error message if compression fails
+                    Toast.makeText(context, "Failed to process image", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -154,26 +156,37 @@ private fun AddVehicleContent(
     onNavigateBack: () -> Unit,
     onSaveClick: () -> Unit
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Tambah Kendaraan") },
+                title = { 
+                    Text(
+                        "Add Vehicle",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(24.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -183,12 +196,12 @@ private fun AddVehicleContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(16.dp)
                     )
                     .clickable(onClick = onSelectImage),
                 contentAlignment = Alignment.Center
@@ -209,72 +222,98 @@ private fun AddVehicleContent(
                             imageVector = Icons.Default.Photo,
                             contentDescription = "Select Image",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Pilih Gambar Kendaraan",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Select Vehicle Image",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Medium
+                            )
                         )
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Nama Kendaraan
+            // Vehicle Name
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                label = { Text("Nama Kendaraan") },
-                placeholder = { Text("Contoh: Honda Beat") },
+                label = { Text("Vehicle Name") },
+                placeholder = { Text("Example: Honda Beat") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
                     imeAction = ImeAction.Next
                 ),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp)
             )
 
-            // Nomor Plat
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // License Plate Number
             OutlinedTextField(
                 value = licensePlate,
                 onValueChange = onLicensePlateChange,
-                label = { Text("Nomor Plat") },
-                placeholder = { Text("Contoh: B 1234 ABC") },
+                label = { Text("License Plate") },
+                placeholder = { Text("Example: B 1234 ABC") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Characters,
                     imeAction = ImeAction.Done
                 ),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp)
             )
 
-            // Submit Button
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Error message
+            if (!errorMessage.isNullOrEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Save Button
             Button(
                 onClick = onSaveClick,
+                enabled = name.isNotEmpty() && licensePlate.isNotEmpty() && selectedImageUri != null && !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                enabled = name.isNotBlank() && licensePlate.isNotBlank() && selectedImageUri != null && !isLoading
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .padding(end = 8.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        "Save",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                 }
-                Text("Simpan")
-            }
-
-            // Error message
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
     }
@@ -288,41 +327,52 @@ fun ImageSourceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pilih Sumber Gambar") },
-        text = { Text("Silahkan pilih sumber gambar yang ingin digunakan") },
+        title = { Text("Choose Image Source", fontWeight = FontWeight.Bold) },
+        text = { Text("Please select the image source you want to use") },
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 6.dp,
         confirmButton = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp, start = 8.dp, end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Button(
+                FilledTonalButton(
                     onClick = onGallerySelected,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(
                         imageVector = Icons.Default.Photo,
                         contentDescription = "Gallery",
-                        modifier = Modifier.size(18.dp).padding(end = 4.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Text("Galeri")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Gallery")
                 }
 
                 Button(
                     onClick = onCameraSelected,
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(
                         imageVector = Icons.Default.Camera,
                         contentDescription = "Camera",
-                        modifier = Modifier.size(18.dp).padding(end = 4.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Text("Kamera")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Camera")
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancel")
             }
         }
     )
