@@ -17,7 +17,6 @@
 
     <application
         android:name=".app.MainApp"
-        android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -40,6 +39,12 @@
             <!-- Enhanced notification intent filter -->
             <intent-filter>
                 <action android:name="OPEN_NOTIFICATION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            
+            <!-- Broadcast notification intent filter -->
+            <intent-filter>
+                <action android:name="OPEN_BROADCAST_NOTIFICATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             
@@ -76,7 +81,7 @@
         <!-- Default notification channel ID for API 26+ -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="parkirkan_notification_channel" />
+            android:value="parkirkan_broadcast_channel" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

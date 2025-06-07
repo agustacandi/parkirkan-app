@@ -39,7 +39,9 @@ data class LoginRequest(
 
 data class UpdateFcmTokenRequest(
     @Json(name = "fcm_token")
-    val fcmToken: String
+    val fcmToken: String,
+    @Json(name = "_method")
+    val method: String = "PUT"
 )
 
 data class ChangePasswordRequest(

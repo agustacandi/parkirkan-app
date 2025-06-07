@@ -40,61 +40,59 @@ class MainApp: Application() {
      * - Regular channel: Default priority for regular app notifications
      */
     fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            
-            // Try to delete existing channels to ensure fresh settings
-            try {
-                notificationManager.deleteNotificationChannel(ALERT_CHANNEL_ID)
-                notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL_ID)
-            } catch (e: Exception) {
-                // Ignore
-            }
-            
-            // Alert Channel (High Priority)
-            val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.alarm_sound}")
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM) // ALARM for loud sound
-                .build()
-                
-            val alertChannel = NotificationChannel(
-                ALERT_CHANNEL_ID,
-                "Parking Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Important alerts about your vehicle"
-                setSound(soundUri, audioAttributes)
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-                enableLights(true)
-                lightColor = ContextCompat.getColor(this@MainApp, R.color.colorAccent)
-                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                setBypassDnd(true)
-                setShowBadge(true)
-                
-                // Set importance again to ensure it's applied
-                importance = NotificationManager.IMPORTANCE_HIGH
-            }
-            notificationManager.createNotificationChannel(alertChannel)
-            
-            // Regular Notification Channel
-            val normalChannel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                "App Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Regular app notifications"
-                setSound(soundUri, audioAttributes)
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 300, 200, 300)
-                enableLights(true)
-                lightColor = ContextCompat.getColor(this@MainApp, R.color.colorAccent)
-                
-                // Set importance again to ensure it's applied
-                importance = NotificationManager.IMPORTANCE_DEFAULT
-            }
-            notificationManager.createNotificationChannel(normalChannel)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Try to delete existing channels to ensure fresh settings
+        try {
+            notificationManager.deleteNotificationChannel(ALERT_CHANNEL_ID)
+            notificationManager.deleteNotificationChannel(NOTIFICATION_CHANNEL_ID)
+        } catch (e: Exception) {
+            // Ignore
         }
+
+        // Alert Channel (High Priority)
+        val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.alarm_sound}")
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_ALARM) // ALARM for loud sound
+            .build()
+
+        val alertChannel = NotificationChannel(
+            ALERT_CHANNEL_ID,
+            "Parking Alerts",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Important alerts about your vehicle"
+            setSound(soundUri, audioAttributes)
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+            enableLights(true)
+            lightColor = ContextCompat.getColor(this@MainApp, R.color.colorAccent)
+            lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            setBypassDnd(true)
+            setShowBadge(true)
+
+            // Set importance again to ensure it's applied
+            importance = NotificationManager.IMPORTANCE_HIGH
+        }
+        notificationManager.createNotificationChannel(alertChannel)
+
+        // Regular Notification Channel
+        val normalChannel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            "App Notifications",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Regular app notifications"
+            setSound(soundUri, audioAttributes)
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 300, 200, 300)
+            enableLights(true)
+            lightColor = ContextCompat.getColor(this@MainApp, R.color.colorAccent)
+
+            // Set importance again to ensure it's applied
+            importance = NotificationManager.IMPORTANCE_DEFAULT
+        }
+        notificationManager.createNotificationChannel(normalChannel)
     }
 }

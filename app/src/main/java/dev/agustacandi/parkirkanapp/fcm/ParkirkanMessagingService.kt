@@ -1,19 +1,15 @@
 package dev.agustacandi.parkirkanapp.fcm
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -51,11 +47,6 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
         private const val WAKELOCK_TIMEOUT = 20000L // 20 seconds
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        // No need to create channels here as they're created in MainApp
-    }
-
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d(TAG, "From: ${remoteMessage.from}")
         Log.d(TAG, "Data: ${remoteMessage.data}")
@@ -74,21 +65,38 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
             // Process the notification
             val notificationType = remoteMessage.data["notification_type"] ?: "default"
             val title = remoteMessage.notification?.title
+                ?: remoteMessage.data["notification_title"]
                 ?: remoteMessage.data["title"]
                 ?: "Attention!"
             val message = remoteMessage.notification?.body
+                ?: remoteMessage.data["notification_body"]
                 ?: remoteMessage.data["message"]
                 ?: "Someone is taking your vehicle!"
 
+            // Log detailed information for debugging
+            Log.d(TAG, "=== FCM Message Details ===")
+            Log.d(TAG, "Notification Type: $notificationType")
+            Log.d(TAG, "Title: $title")
+            Log.d(TAG, "Message: $message")
+            Log.d(TAG, "Has notification payload: ${remoteMessage.notification != null}")
+            Log.d(TAG, "All Data Keys: ${remoteMessage.data.keys}")
+            remoteMessage.data.forEach { (key, value) ->
+                Log.d(TAG, "Data[$key] = $value")
+            }
+            Log.d(TAG, "========================")
+
             // Additional data for deep linking if needed
             val deepLinkData = remoteMessage.data.filter {
-                it.key != "title" && it.key != "message" && it.key != "notification_type"
+                it.key != "title" && it.key != "message" && it.key != "notification_type" &&
+                        it.key != "notification_title" && it.key != "notification_body"
             }
 
             // For alert notifications, we want to use special handling
             if (notificationType == "alert" || remoteMessage.data["click_action"] == "OPEN_NOTIFICATION") {
+                Log.d(TAG, "Routing to ALERT notification")
                 showAlertNotification(title, message, deepLinkData)
             } else {
+                Log.d(TAG, "Routing to NORMAL notification (default)")
                 // Regular notification
                 showNormalNotification(title, message, deepLinkData)
             }
@@ -121,7 +129,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
     }
 
     private fun showAlertNotification(
-        title: String, 
+        title: String,
         message: String,
         deepLinkData: Map<String, String>? = null
     ) {
@@ -131,9 +139,11 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 action = "OPEN_NOTIFICATION"
                 addCategory(Intent.CATEGORY_LAUNCHER)
                 // Use stronger flags to ensure the activity is brought to front
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
-                         Intent.FLAG_ACTIVITY_CLEAR_TOP or 
-                         Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
 
                 // Important extras to direct to Alert screen
                 putExtra("notification_opened", true)
@@ -141,7 +151,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 putExtra("target_route", NavDestination.Alert.route)
                 putExtra("force_navigation", true) // New flag to force navigation
                 putExtra("timestamp", System.currentTimeMillis())
-                
+
                 // Add deep link data if available
                 deepLinkData?.forEach { (key, value) ->
                     putExtra(key, value)
@@ -158,26 +168,39 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
             // Create additional deep link intent as backup approach
             val deepLinkUri = Uri.parse("parkirkanapp://alert")
             val deepLinkIntent = Intent(Intent.ACTION_VIEW, deepLinkUri).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
-                         Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                )
                 putExtras(intent) // Copy all extras from the main intent
             }
 
             // Ensure we have a unique request code for each notification
             val requestCode = System.currentTimeMillis().toInt()
-            
+
             // Log intent details for debugging
-            Log.d(TAG, "Creating PendingIntent for alert notification with action: ${intent.action}")
-            Log.d(TAG, "Intent extras: notification_opened=${intent.getBooleanExtra("notification_opened", false)}, " +
-                       "notification_type=${intent.getStringExtra("notification_type")}, " +
-                       "target_route=${intent.getStringExtra("target_route")}, " +
-                       "force_navigation=${intent.getBooleanExtra("force_navigation", false)}")
-            
+            Log.d(
+                TAG,
+                "Creating PendingIntent for alert notification with action: ${intent.action}"
+            )
+            Log.d(
+                TAG,
+                "Intent extras: notification_opened=${
+                    intent.getBooleanExtra(
+                        "notification_opened",
+                        false
+                    )
+                }, " +
+                        "notification_type=${intent.getStringExtra("notification_type")}, " +
+                        "target_route=${intent.getStringExtra("target_route")}, " +
+                        "force_navigation=${intent.getBooleanExtra("force_navigation", false)}"
+            )
+
             // Try to use the main intent first, but create a backup with the deep link
             val pendingIntent = PendingIntent.getActivity(
                 this, requestCode, intent, pendingIntentFlags
             )
-            
+
             // Create backup PendingIntent with deep link
             val backupPendingIntent = PendingIntent.getActivity(
                 this, requestCode + 1, deepLinkIntent, pendingIntentFlags
@@ -208,6 +231,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 .addAction(R.drawable.ic_notifications, "Open", backupPendingIntent)
                 // Ensure notification appears as heads-up
                 .setFullScreenIntent(pendingIntent, true)
+                .setOnlyAlertOnce(false) // Allow sound every time
 
             // Make notification display even when app is in foreground on Android 13+
             if (Build.VERSION.SDK_INT >= 33) {
@@ -225,7 +249,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 val notificationId = requestCode // Use same value as request code
                 notificationManager.notify(notificationId, notificationBuilder.build())
                 Log.d(TAG, "Alert notification shown with ID: $notificationId")
-                
+
                 // Ensure notification works in background
                 wakeUpForNotification()
             } catch (e: SecurityException) {
@@ -237,7 +261,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
     }
 
     private fun showNormalNotification(
-        title: String, 
+        title: String,
         message: String,
         deepLinkData: Map<String, String>? = null
     ) {
@@ -245,7 +269,7 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
             // Regular notification intent
             val intent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                
+
                 // Add deep link data if available
                 deepLinkData?.forEach { (key, value) ->
                     putExtra(key, value)
@@ -262,21 +286,18 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 this, System.currentTimeMillis().toInt(), intent, pendingIntentFlags
             )
 
-            // Sound URI from resource (same as defined in channel)
-            val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.alarm_sound}")
-
             // Create standard notification
-            val notificationBuilder = NotificationCompat.Builder(this, MainApp.NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notifications)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setSound(soundUri)
-                .setVibrate(longArrayOf(0, 300, 200, 300))
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
+            val notificationBuilder =
+                NotificationCompat.Builder(this, MainApp.NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notifications)
+                    .setContentTitle(title)
+                    .setContentText(message)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                    .setVibrate(longArrayOf(0, 300, 200, 300))
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent)
 
             // Show the notification
             val notificationManager = NotificationManagerCompat.from(this)
@@ -290,12 +311,13 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
             Log.e(TAG, "Error showing normal notification", e)
         }
     }
-    
+
     // Helper method to trigger system vibration
     private fun triggerSystemVibration(pattern: LongArray) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                val vibratorManager =
+                    getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 val vibrator = vibratorManager.defaultVibrator
 
                 // Use VibrationEffect with varying amplitudes
@@ -306,19 +328,13 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
-                } else {
-                    // Legacy method for older devices
-                    @Suppress("DEPRECATION")
-                    vibrator.vibrate(pattern, -1)
-                }
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error triggering vibration", e)
         }
     }
-    
+
     // Additional method to help ensure notification works in background
     private fun wakeUpForNotification() {
         try {
@@ -328,16 +344,17 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 if (!pm.isInteractive) {
                     // If screen is off, try to raise priority
                     val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    nm.notificationChannels.find { it.id == MainApp.ALERT_CHANNEL_ID }?.let { channel ->
-                        if (channel.importance < NotificationManager.IMPORTANCE_HIGH) {
-                            Log.d(TAG, "Upgrading channel importance")
-                            // Can't directly change importance, so recreate channel
-                            nm.deleteNotificationChannel(MainApp.ALERT_CHANNEL_ID)
-                            
-                            // Recreate with same importance from MainApp
-                            (application as? MainApp)?.createNotificationChannels()
+                    nm.notificationChannels.find { it.id == MainApp.ALERT_CHANNEL_ID }
+                        ?.let { channel ->
+                            if (channel.importance < NotificationManager.IMPORTANCE_HIGH) {
+                                Log.d(TAG, "Upgrading channel importance")
+                                // Can't directly change importance, so recreate channel
+                                nm.deleteNotificationChannel(MainApp.ALERT_CHANNEL_ID)
+
+                                // Recreate with same importance from MainApp
+                                (application as? MainApp)?.createNotificationChannels()
+                            }
                         }
-                    }
                 }
             }
         } catch (e: Exception) {

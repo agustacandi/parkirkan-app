@@ -36,6 +36,8 @@ import dev.agustacandi.parkirkanapp.presentation.profile.password.ChangePassword
 import dev.agustacandi.parkirkanapp.presentation.security.SecurityMainScreen
 import dev.agustacandi.parkirkanapp.presentation.security.broadcast.add.AddBroadcastScreen
 import dev.agustacandi.parkirkanapp.presentation.security.broadcast.edit.EditBroadcastScreen
+import dev.agustacandi.parkirkanapp.presentation.broadcast.BroadcastScreen
+import dev.agustacandi.parkirkanapp.presentation.broadcast.detail.BroadcastDetailScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.add.AddVehicleScreen
 import dev.agustacandi.parkirkanapp.presentation.vehicle.edit.EditVehicleScreen
 import dev.agustacandi.parkirkanapp.ui.theme.ParkirkanAppTheme
@@ -106,6 +108,21 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     Log.e(TAG, "Alert route not found in nav graph")
                                 }
+                            } else if (destination.startsWith("broadcast_detail/")) {
+                                Log.d(TAG, "Starting navigation to Broadcast Detail screen...")
+                                
+                                // For broadcast detail, ensure user gets to the main screen first then navigate
+                                if (loginState is LoginState.AlreadyLoggedIn || loginState is LoginState.Success) {
+                                    navController.navigate(destination) {
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
+                                    Log.d(TAG, "Navigation to Broadcast Detail completed successfully")
+                                } else {
+                                    // If user not logged in, delay navigation until login completes
+                                    Log.d(TAG, "User not logged in, will navigate after login")
+                                    return@LaunchedEffect
+                                }
                             } else {
                                 // Normal navigation for other destinations
                                 navController.navigate(destination)
@@ -160,6 +177,13 @@ class MainActivity : ComponentActivity() {
 
     private fun setupFCM() {
         FirebaseMessaging.getInstance().subscribeToTopic("broadcast")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "✅ Successfully subscribed to 'broadcast' topic")
+                } else {
+                    Log.e(TAG, "❌ Failed to subscribe to 'broadcast' topic", task.exception)
+                }
+            }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
@@ -198,6 +222,29 @@ class MainActivity : ComponentActivity() {
                         Log.e(TAG, "Error setting navigation event", e)
                     }
                 }
+            } else if (notificationType == "broadcast" || intent.action == "OPEN_BROADCAST_NOTIFICATION") {
+                Log.d(TAG, "Processing broadcast notification intent")
+                
+                val broadcastId = it.getStringExtra("broadcast_id")
+                Log.d(TAG, "Broadcast ID from intent: $broadcastId")
+                
+                lifecycleScope.launch {
+                    try {
+                        val navigationRoute = if (broadcastId != null) {
+                            NavDestination.BroadcastDetail.createRoute(broadcastId)
+                        } else {
+                            // Fallback to broadcast list if no ID
+                            NavDestination.Broadcast.route
+                        }
+                        
+                        _navigationEvent.value = navigationRoute
+                        Log.d(TAG, "Broadcast navigation event set to: ${_navigationEvent.value}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error setting broadcast navigation event", e)
+                    }
+                }
+            } else {
+                Log.d(TAG, "No specific notification action, ignoring intent")
             }
         }
     }
@@ -297,6 +344,10 @@ sealed class NavDestination(val route: String) {
         fun createRoute(broadcastId: String) = "edit_broadcast/$broadcastId"
         const val ARG_BROADCAST_ID = "broadcastId"
     }
+    data object BroadcastDetail : NavDestination("broadcast_detail/{broadcastId}") {
+        fun createRoute(broadcastId: String) = "broadcast_detail/$broadcastId"
+        const val ARG_BROADCAST_ID = "broadcastId"
+    }
 
     // Nested destinations
     sealed class BottomNav(route: String) : NavDestination(route) {
@@ -359,6 +410,16 @@ fun ParkingAppNavHost(
         // Login Screen
         composable(NavDestination.Login.route) {
             AuthScreen(viewModel = authViewModel)
+        }
+
+        // Broadcast Screen
+        composable(NavDestination.Broadcast.route) {
+            BroadcastScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onNavigateToDetail = { broadcastId ->
+                    navController.navigate(NavDestination.BroadcastDetail.createRoute(broadcastId))
+                }
+            )
         }
 
         // Main Screen with Bottom Navigation
@@ -443,6 +504,20 @@ fun ParkingAppNavHost(
                 onNavigateBack = { navController.navigateUp() },
                 onBroadcastUpdated = { setRefreshAndNavigateUp(navController, "refresh_broadcasts") },
                 onBroadcastDeleted = { setRefreshAndNavigateUp(navController, "refresh_broadcasts") }
+            )
+        }
+
+        // Broadcast Detail Screen
+        composable(
+            route = NavDestination.BroadcastDetail.route,
+            arguments = listOf(
+                navArgument(NavDestination.BroadcastDetail.ARG_BROADCAST_ID) {
+                    type = NavType.StringType
+                }
+            )
+        ) {
+            BroadcastDetailScreen(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     }
