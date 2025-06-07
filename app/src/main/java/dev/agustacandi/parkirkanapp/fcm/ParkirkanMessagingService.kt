@@ -293,11 +293,15 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                     .setContentTitle(title)
                     .setContentText(message)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setVibrate(longArrayOf(0, 300, 200, 300))
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
+                    // Ensure notification appears as heads-up
+                    .setFullScreenIntent(pendingIntent, true)
+                    .setOnlyAlertOnce(false) // Allow sound every time
 
             // Show the notification
             val notificationManager = NotificationManagerCompat.from(this)

@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioAttributes
 import android.net.Uri
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.FirebaseApp
@@ -84,14 +83,13 @@ class MainApp: Application() {
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             description = "Regular app notifications"
-            setSound(soundUri, audioAttributes)
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 300, 200, 300)
             enableLights(true)
             lightColor = ContextCompat.getColor(this@MainApp, R.color.colorAccent)
 
             // Set importance again to ensure it's applied
-            importance = NotificationManager.IMPORTANCE_DEFAULT
+            importance = NotificationManager.IMPORTANCE_HIGH
         }
         notificationManager.createNotificationChannel(normalChannel)
     }
