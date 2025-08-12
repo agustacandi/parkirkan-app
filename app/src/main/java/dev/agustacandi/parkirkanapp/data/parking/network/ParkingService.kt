@@ -19,6 +19,9 @@ interface ParkingService {
 
     @POST("parking/confirm-check-out")
     suspend fun confirmCheckOut(@Body request: ConfirmCheckOutRequest): ConfirmCheckOutResponse
+
+    @POST("parking/report-check-out")
+    suspend fun reportCheckOut(@Body request: ReportCheckOutRequest): ReportCheckOutResponse
 }
 
 data class IsCheckedInRequest(
@@ -39,10 +42,20 @@ data class IsCheckedInData(
 
 data class ConfirmCheckOutRequest(
     @Json(name = "license_plate")
-    val licensePlate: String
+    val licensePlate: String,
 )
 
 data class ConfirmCheckOutResponse(
+    val success: Boolean,
+    val message: String
+)
+
+data class ReportCheckOutRequest(
+    @Json(name = "license_plate")
+    val licensePlate: String,
+)
+
+data class ReportCheckOutResponse(
     val success: Boolean,
     val message: String
 )

@@ -23,7 +23,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import dev.agustacandi.parkirkanapp.presentation.alert.AlertScreen
 import dev.agustacandi.parkirkanapp.presentation.splash.SplashScreen
@@ -176,15 +175,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupFCM() {
-        FirebaseMessaging.getInstance().subscribeToTopic("broadcast")
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d(TAG, "✅ Successfully subscribed to 'broadcast' topic")
-                } else {
-                    Log.e(TAG, "❌ Failed to subscribe to 'broadcast' topic", task.exception)
-                }
-            }
-
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 fcmTokenManager.getFCMToken().collectLatest { result ->
@@ -282,20 +272,8 @@ class MainActivity : ComponentActivity() {
     }
     
     private fun navigateToMainFlow(userRole: String, navController: NavHostController) {
-        val destination = if (userRole == "security") {
-            Log.d(TAG, "Navigating to security screen for security role")
-            // Unsubscribe from alert topic first to ensure clean state
-            FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
-            // Then subscribe to alert topic
-            FirebaseMessaging.getInstance().subscribeToTopic("alert")
-            NavDestination.SecurityNav.Home.route
-        } else {
-            Log.d(TAG, "Navigating to main screen for user role")
-            // Ensure user is unsubscribed from alert topic
-            FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
-            NavDestination.Main.route
-        }
-        
+        val destination = if( userRole == "security") NavDestination.SecurityNav.Home.route else NavDestination.Main.route
+
         Log.d(TAG, "Final destination: $destination")
         navController.navigate(destination) {
             popUpTo(NavDestination.Login.route) { inclusive = true }
@@ -399,10 +377,10 @@ fun ParkingAppNavHost(
         composable(NavDestination.Alert.route) {
             AlertScreen(
                 onConfirmClick = {
-                    navController.popBackStack(NavDestination.Main.route, false)
+                    navController.navigate(NavDestination.Main.route)
                 },
                 onRejectClick = {
-                    navController.popBackStack()
+                    navController.navigate(NavDestination.Main.route)
                 }
             )
         }

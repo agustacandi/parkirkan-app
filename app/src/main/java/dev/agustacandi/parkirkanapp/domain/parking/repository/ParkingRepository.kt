@@ -11,4 +11,6 @@ interface ParkingRepository {
     suspend fun isVehicleCheckedIn(licensePlate: String): Boolean
 
     suspend fun confirmCheckOut(licensePlate: String): Boolean
+
+    suspend fun reportCheckOut(licensePlate: String): Boolean
 }

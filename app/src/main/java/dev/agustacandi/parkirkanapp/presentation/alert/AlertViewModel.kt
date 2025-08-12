@@ -53,9 +53,23 @@ class AlertViewModel @Inject constructor(
         }
     }
 
-    fun rejectCheckOut() {
+    fun reportCheckOut(licensePlate: String) {
         viewModelScope.launch {
-            _actionFlow.emit(AlertAction.NavigateBack)
+            _isLoading.value = true
+            try {
+                val result = parkingRepository.reportCheckOut(licensePlate)
+                if (result) {
+                    _actionFlow.emit(AlertAction.ShowSuccess)
+                } else {
+                    _errorMessage.value = "Failed to report check-out"
+                    _actionFlow.emit(AlertAction.ShowError)
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "An error occurred"
+                _actionFlow.emit(AlertAction.ShowError)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

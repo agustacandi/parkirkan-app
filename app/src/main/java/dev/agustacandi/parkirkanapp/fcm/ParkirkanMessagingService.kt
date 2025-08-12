@@ -26,8 +26,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -134,6 +136,10 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
         deepLinkData: Map<String, String>? = null
     ) {
         try {
+            val userRole = runBlocking {
+                authRepository.getCurrentUser().first()?.role ?: "user"
+            }
+
             // Intent to open the Alert screen directly
             val intent = Intent(this, MainActivity::class.java).apply {
                 action = "OPEN_NOTIFICATION"
@@ -225,13 +231,17 @@ class ParkirkanMessagingService : FirebaseMessagingService() {
                 .setSound(soundUri)
                 .setLights(ContextCompat.getColor(this, R.color.colorAccent), 1000, 500)
                 .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .addAction(R.drawable.ic_notifications, "View Alert", pendingIntent)
+                .setOnlyAlertOnce(false) // Allow sound every time
                 // Add backup action with deep link
                 .addAction(R.drawable.ic_notifications, "Open", backupPendingIntent)
-                // Ensure notification appears as heads-up
-                .setFullScreenIntent(pendingIntent, true)
-                .setOnlyAlertOnce(false) // Allow sound every time
+
+            if(userRole == "user") {
+               notificationBuilder
+                   .addAction(R.drawable.ic_notifications, "View Alert", pendingIntent)
+                   .setContentIntent(pendingIntent)
+                   // Ensure notification appears as heads-up
+                   .setFullScreenIntent(pendingIntent, true)
+            }
 
             // Make notification display even when app is in foreground on Android 13+
             if (Build.VERSION.SDK_INT >= 33) {

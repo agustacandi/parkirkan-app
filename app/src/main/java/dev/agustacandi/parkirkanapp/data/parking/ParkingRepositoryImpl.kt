@@ -7,6 +7,7 @@ import androidx.paging.cachedIn
 import dev.agustacandi.parkirkanapp.data.parking.network.ConfirmCheckOutRequest
 import dev.agustacandi.parkirkanapp.data.parking.network.IsCheckedInRequest
 import dev.agustacandi.parkirkanapp.data.parking.network.ParkingService
+import dev.agustacandi.parkirkanapp.data.parking.network.ReportCheckOutRequest
 import dev.agustacandi.parkirkanapp.data.parking.response.ParkingRecord
 import dev.agustacandi.parkirkanapp.domain.parking.repository.ParkingRepository
 import dev.agustacandi.parkirkanapp.presentation.parking.ParkingPagingSource
@@ -48,6 +49,15 @@ class ParkingRepositoryImpl @Inject constructor(
     override suspend fun confirmCheckOut(licensePlate: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val response = parkingService.confirmCheckOut(ConfirmCheckOutRequest(licensePlate))
+            return@withContext response.success
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
+    override suspend fun reportCheckOut(licensePlate: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val response = parkingService.reportCheckOut(ReportCheckOutRequest(licensePlate))
             return@withContext response.success
         } catch (e: Exception) {
             throw e
