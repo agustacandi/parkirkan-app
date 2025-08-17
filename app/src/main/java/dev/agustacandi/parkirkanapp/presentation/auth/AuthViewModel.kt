@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.google.firebase.messaging.FirebaseMessaging
+import dev.agustacandi.parkirkanapp.fcm.TopicManager
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -61,6 +62,7 @@ class AuthViewModel @Inject constructor(
                         val userRole = user?.role ?: "user"
                         Log.d("AuthViewModel", "Login successful with role: $userRole")
                         // Set success state first
+                        TopicManager.applyForRole(userRole)
                         _loginState.value = LoginState.Success(userRole)
                     } else {
                         val error = result.exceptionOrNull()
@@ -84,13 +86,7 @@ class AuthViewModel @Inject constructor(
             _logoutState.value = LogoutState.Loading
 
             // Unsubscribe from all FCM topics
-            try {
-                Log.d("AuthViewModel", "Unsubscribing from FCM topics")
-                FirebaseMessaging.getInstance().unsubscribeFromTopic("alert")
-                FirebaseMessaging.getInstance().unsubscribeFromTopic("broadcast")
-            } catch (e: Exception) {
-                Log.e("AuthViewModel", "Error unsubscribing from FCM topics", e)
-            }
+            TopicManager.clearAll();
 
             authRepository.logout()
                 .onEach { result ->

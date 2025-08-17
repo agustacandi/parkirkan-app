@@ -42,12 +42,9 @@ data class ParkingRecord(
 	@Json(name = "check_out_image")
 	val checkOutImage: String? = null,
 	@Json(name = "is_check_out_confirmed")
-	val isCheckOutConfirmed: Int,
+	val isCheckOutConfirmed: Boolean,
 	val status: String,
-	@Json(name = "vehicle_id")
-	val vehicleId: Int,
-	@Json(name = "user_id")
-	val userId: Int,
+	val vehicle: Vehicle,
 	@Json(name = "created_at")
 	val createdAt: String,
 	@Json(name = "updated_at")
@@ -58,4 +55,16 @@ data class PageLink(
 	val url: String?,
 	val label: String,
 	val active: Boolean
+)
+
+data class Vehicle(
+	val id: Int,
+	val name: String,
+	@Json(name = "license_plate")
+	val licensePlate: String,
+	val image: String,
+	@Json(name = "created_at")
+	val createdAt: String,
+	@Json(name = "updated_at")
+	val updatedAt: String
 )
