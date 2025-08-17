@@ -272,16 +272,16 @@ fun ParkingRecordItem(parkingRecord: ParkingRecord) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Vehicle ID: ${parkingRecord.vehicleId}",
+                    text = "Vehicle License Plate: ${parkingRecord.vehicle.licensePlate}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Text(
-                    text = "User ID: ${parkingRecord.userId}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+//                Text(
+//                    text = "User ID: ${parkingRecord.userId}",
+//                    style = MaterialTheme.typography.bodySmall,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
             }
         }
     }
